@@ -1,11 +1,10 @@
 // js/accounts/appwrite-sync.js
-import { client, databases } from '../lib/appwrite.js';
+import { client, databases, APPWRITE_DATABASE_ID as DATABASE_ID } from '../lib/appwrite.js';
 import { db as database } from '../db.js';
 import { authManager } from './auth.js';
 import { ID, Permission, Query, Role } from 'appwrite';
 import { getShareUrl, getTrackArtists } from '../utils.js';
 
-const DATABASE_ID = 'wesper';
 const USERS_COLLECTION = 'DB_users';
 const PUBLIC_PLAYLISTS_COLLECTION = 'DB_public_playlists';
 const COLLABORATIVE_PLAYLISTS_COLLECTION = 'DB_collaborative_playlists';

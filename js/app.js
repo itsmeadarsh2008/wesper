@@ -22,7 +22,7 @@ import { DiscordPresence } from './discord-presence.js';
 import { initializeUIInteractions } from './ui-interactions.js';
 import { debounce, SVG_PLAY_MINI, getShareUrl, shareOrCopy } from './utils.js';
 import { SearchEngine } from './search-engine.js';
-import { storage } from './lib/appwrite.js';
+import { storage, APPWRITE_PROJECT_ID, APPWRITE_ENDPOINT } from './lib/appwrite.js';
 import { ID } from 'appwrite';
 import { sidePanelManager } from './side-panel.js';
 import { db } from './db.js';
@@ -365,8 +365,8 @@ async function uploadCoverImage(file) {
         const result = await storage.createFile(BUCKET_ID, fileId, file);
 
         // Construct the view URL
-        const endpoint = 'https://sgp.cloud.appwrite.io/v1';
-        const projectId = 'wesper';
+        const endpoint = APPWRITE_ENDPOINT;
+        const projectId = APPWRITE_PROJECT_ID;
         const publicUrl = `${endpoint}/storage/buckets/${BUCKET_ID}/files/${result.$id}/view?project=${projectId}`;
 
         console.log('[App] Upload successful! URL:', publicUrl);

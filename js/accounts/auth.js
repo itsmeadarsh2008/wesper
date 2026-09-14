@@ -1,11 +1,10 @@
 // js/accounts/auth.js
-import { account, client } from '../lib/appwrite.js';
+import { account, client, APPWRITE_PROJECT_ID } from '../lib/appwrite.js';
 import { ID } from 'appwrite';
 import MailChecker from 'mailchecker';
 
 const OAUTH_ATTEMPT_KEY = 'mono-oauth-attempt';
 const OAUTH_ATTEMPT_MAX_AGE_MS = 2 * 60 * 1000;
-const APPWRITE_PROJECT_ID = 'wesper';
 const APPWRITE_OAUTH_FALLBACK_ENDPOINTS = ['https://cloud.appwrite.io/v1', 'https://sgp.cloud.appwrite.io/v1'];
 const DEFAULT_OAUTH_REDIRECT_URL = 'https://monochrome-plus.appwrite.network';
 const EMAIL_BASIC_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

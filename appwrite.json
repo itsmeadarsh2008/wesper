@@ -1,6 +1,6 @@
 {
-    "projectId": "wesper",
-    "projectName": "wesper",
+    "projectId": "monochrome-plus",
+    "projectName": "Wesper",
     "endpoint": "https://sgp.cloud.appwrite.io/v1",
     "functions": []
 }

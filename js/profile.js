@@ -3,7 +3,7 @@ import { authManager } from './accounts/auth.js';
 import { navigate } from './router.js';
 import { MusicAPI } from './music-api.js';
 import { debounce, escapeHtml, getShareUrl, copyTextToClipboard } from './utils.js';
-import { storage, client } from './lib/appwrite.js';
+import { storage, client, APPWRITE_PROJECT_ID, APPWRITE_ENDPOINT, APPWRITE_DATABASE_ID } from './lib/appwrite.js';
 import { ID } from 'appwrite';
 
 // objects execution february 29th 2027
@@ -73,8 +73,8 @@ async function uploadImage(file) {
 
         // Construct the preview URL (using the project endpoint)
         // Format: [endpoint]/storage/buckets/[bucketId]/files/[fileId]/preview?project=[projectId]
-        const endpoint = 'https://sgp.cloud.appwrite.io/v1';
-        const projectId = 'wesper';
+        const endpoint = APPWRITE_ENDPOINT;
+        const projectId = APPWRITE_PROJECT_ID;
         const url = `${endpoint}/storage/buckets/${BUCKET_ID}/files/${result.$id}/view?project=${projectId}`;
 
         console.log('[Profile] Upload successful! URL:', url);
@@ -347,7 +347,7 @@ export async function loadProfile(username) {
     // Real-time status updates
     if (profileSubscription) profileSubscription();
 
-    const DATABASE_ID = 'wesper';
+    const DATABASE_ID = APPWRITE_DATABASE_ID;
     const USERS_COLLECTION = 'DB_users';
 
     profileSubscription = client.subscribe(

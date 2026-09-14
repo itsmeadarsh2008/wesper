@@ -4,8 +4,8 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const client = new Client()
-    .setEndpoint('https://sgp.cloud.appwrite.io/v1')
-    .setProject('wesper')
+    .setEndpoint(process.env.APPWRITE_ENDPOINT || 'https://sgp.cloud.appwrite.io/v1')
+    .setProject(process.env.APPWRITE_PROJECT_ID || 'monochrome-plus')
     .setKey(process.env.APPWRITE_API_KEY); // Requires an API key with database permissions
 
 const databases = new Databases(client);
@@ -15,8 +15,8 @@ const SYNC_COLLECTION_METADATA =
     process.argv.includes('--sync-collection-metadata') ||
     process.env.APPWRITE_SETUP_SYNC_COLLECTION_METADATA === 'true';
 
-const DATABASE_ID = 'wesper';
-const DATABASE_NAME = 'Wesper';
+const DATABASE_ID = process.env.APPWRITE_DATABASE_ID || 'monochrome-plus';
+const DATABASE_NAME = process.env.APPWRITE_DATABASE_NAME || 'Wesper';
 const USERS_COLLECTION_ID = 'DB_users';
 
 function wait(ms) {
@@ -247,10 +247,14 @@ async function setup() {
             console.log('⚠️ Collection metadata sync is enabled (--sync-collection-metadata).');
         }
 
-        // 1. Create Database if not exists
+        // 1. Create Database if not exists (ID is immutable, name is display-only)
         try {
-            await databases.get(DATABASE_ID);
+            const existing = await databases.get(DATABASE_ID);
             console.log(`✅ Database "${DATABASE_ID}" already exists.`);
+            if (existing?.name !== DATABASE_NAME) {
+                console.log(`   Renaming database display name "${existing?.name}" → "${DATABASE_NAME}"...`);
+                await databases.update(DATABASE_ID, DATABASE_NAME);
+            }
         } catch (e) {
             if (!isNotFoundError(e)) {
                 throw e;
