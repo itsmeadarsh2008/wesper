@@ -18,6 +18,35 @@ function addonIdentity(addon) {
     return String(addon?.manifest?.id || addon?.id || addon?.baseUrl || '').trim();
 }
 
+// Addon URL normalization — the URL path must always end in manifest.json.
+// Pasted install URLs carry a query string AFTER manifest.json
+// (e.g. .../quality/manifest.json?sources=tidal). Naive endsWith/append
+// logic treats the query as part of the path, producing broken URLs like
+// .../manifest.json?sources=tidal/manifest.json and search calls like
+// .../manifest.json?sources=tidal/search?q=... (which hit the manifest
+// route and return zero tracks instead of erroring).
+function splitAddonUrl(input) {
+    const noHash = String(input || '').trim().split('#')[0];
+    const qIdx = noHash.indexOf('?');
+    const path = (qIdx >= 0 ? noHash.slice(0, qIdx) : noHash).replace(/\/+$/, '');
+    const query = qIdx >= 0 ? noHash.slice(qIdx + 1) : '';
+    return { path, query };
+}
+
+// Base path of an addon (no manifest.json suffix, no query/hash, no
+// trailing slash). Applied at every use site so already-stored installs
+// with a query or manifest.json baked into baseUrl keep working.
+function addonBasePath(input) {
+    return splitAddonUrl(input).path.replace(/\/manifest\.json$/i, '');
+}
+
+function addonManifestUrl(input) {
+    const { path, query } = splitAddonUrl(input);
+    const base = path.replace(/\/manifest\.json$/i, '');
+    if (!base) return '';
+    return `${base}/manifest.json${query ? `?${query}` : ''}`;
+}
+
 export const eclipseAddonStorage = {
     getAddons() {
         try {
@@ -145,13 +174,16 @@ export const eclipseAddonStorage = {
     },
 
     async fetchManifest(baseUrl) {
-        const normalized = String(baseUrl || '')
-            .trim()
-            .replace(/\/+$/, '');
-        if (!normalized) throw new Error('Addon URL is required');
+        const raw = String(baseUrl || '').trim();
+        if (!raw) throw new Error('Addon URL is required');
 
-        const rootUrl = normalized.replace(/\/manifest\.json$/i, '') || normalized;
-        const manifestUrl = normalized.endsWith('/manifest.json') ? normalized : `${normalized}/manifest.json`;
+        // The manifest URL path always ends in manifest.json — the query
+        // string (e.g. ?sources=tidal) is re-attached AFTER it.
+        const manifestUrl = addonManifestUrl(raw);
+        if (!manifestUrl) throw new Error('Addon URL is required');
+        // baseUrl never carries manifest.json or a query string, so search/
+        // stream/catalog calls built as `${baseUrl}/<resource>` stay valid.
+        const rootUrl = addonBasePath(raw) || manifestUrl;
 
         let res;
         try {
@@ -212,7 +244,7 @@ export function classifyAddonHost(baseUrl) {
 // Probes whether this browser can actually reach an installed addon. Returns a
 // classification plus a fetched flag so the UI can explain the failure.
 export async function probeAddonReachability(addon) {
-    const baseUrl = String(addon?.baseUrl || '').replace(/\/+$/, '');
+    const baseUrl = addonBasePath(addon?.baseUrl);
     const host = classifyAddonHost(baseUrl);
     if (!baseUrl) return { reachable: false, ...host, error: 'No addon URL configured.', hint: null };
     const manifestUrl = `${baseUrl}/manifest.json`;
@@ -612,7 +644,7 @@ export class EclipseAPI {
         const addon = await eclipseAddonStorage.ensureInstalled(addonId);
         if (!addon) throw new Error(NO_ADDON_MESSAGE);
 
-        const baseUrl = (addon.baseUrl || '').replace(/\/manifest\.json$/i, '').replace(/\/+$/, '');
+        const baseUrl = addonBasePath(addon.baseUrl);
         const url = `${baseUrl}/${String(path).replace(/^\/+/, '')}`;
 
         let res;
