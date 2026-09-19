@@ -11,6 +11,7 @@ function corsHeaders() {
 }
 
 function sanitizeForwardHeaders(headers) {
+    const WESPER_USER_AGENT = 'Wesper/1.0 (https://github.com/itsmeadarsh2008/wesper)';
     const blocked = new Set([
         'host',
         'origin',
@@ -29,6 +30,13 @@ function sanitizeForwardHeaders(headers) {
         if (blocked.has(key.toLowerCase())) return;
         out.set(key, value);
     });
+
+    const existing = out.get('user-agent');
+    if (!existing) {
+        out.set('user-agent', WESPER_USER_AGENT);
+    } else if (!existing.includes('Wesper')) {
+        out.set('user-agent', `${existing} ${WESPER_USER_AGENT}`);
+    }
 
     return out;
 }

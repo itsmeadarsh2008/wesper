@@ -22,7 +22,10 @@ function getLocalGitCommit() {
 async function getGitHubCommit() {
     try {
         const res = await fetch(`${APP_REPO_API}/commits/master`, {
-            headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'wesper-build' },
+            headers: {
+                Accept: 'application/vnd.github+json',
+                'User-Agent': 'Wesper/1.0 (https://github.com/itsmeadarsh2008/wesper)',
+            },
             signal: AbortSignal.timeout(8000),
         });
         if (!res.ok) return null;

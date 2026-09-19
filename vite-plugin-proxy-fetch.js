@@ -35,6 +35,8 @@ function readRequestBody(req) {
     });
 }
 
+const WESPER_USER_AGENT = 'Wesper/1.0 (https://github.com/itsmeadarsh2008/wesper)';
+
 function sanitizeForwardHeaders(headers = {}) {
     const blocked = new Set(['host', 'origin', 'referer', 'connection', 'content-length', 'accept-encoding']);
 
@@ -49,11 +51,23 @@ function sanitizeForwardHeaders(headers = {}) {
     return out;
 }
 
+function ensureWesperUserAgent(headers = {}) {
+    const out = { ...headers };
+    const existingKey = Object.keys(out).find((key) => key.toLowerCase() === 'user-agent');
+    const existing = existingKey ? out[existingKey] : null;
+    if (!existing) {
+        out['User-Agent'] = WESPER_USER_AGENT;
+    } else if (!String(existing).includes('Wesper')) {
+        out[existingKey] = `${existing} ${WESPER_USER_AGENT}`;
+    }
+    return out;
+}
+
 function nodeGet(url, timeoutMs = 12000, redirects = 0) {
     return new Promise((resolve, reject) => {
         if (redirects > 3) return reject(new Error('Too many redirects'));
         const mod = url.startsWith('https') ? https : http;
-        const req = mod.get(url, { agent, timeout: timeoutMs }, (res) => {
+        const req = mod.get(url, { agent, timeout: timeoutMs, headers: { 'User-Agent': WESPER_USER_AGENT } }, (res) => {
             if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
                 res.resume();
                 return resolve(nodeGet(res.headers.location, timeoutMs, redirects + 1));
@@ -90,7 +104,7 @@ function nodeRequest({ url, method = 'GET', headers = {}, body = null, timeoutMs
             target,
             {
                 method,
-                headers,
+                headers: ensureWesperUserAgent(headers),
                 agent,
                 timeout: timeoutMs,
             },
