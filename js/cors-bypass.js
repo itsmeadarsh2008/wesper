@@ -72,7 +72,6 @@ const NEEDS_PROXY_HOSTS = new Set([
     'lyricsplus-seven.vercel.app',
     'lyrics-plus-backend.vercel.app',
     'storage.lyrics-api.binimum.org',
-    'translate.googleapis.com',
     'sheets.artistgrid.cx',
     'trends.artistgrid.cx',
     'tracker.israeli.ovh',
@@ -81,7 +80,16 @@ const NEEDS_PROXY_HOSTS = new Set([
 ]);
 
 // Hosts that support CORS natively (never need proxy)
+// NOTE: translate.googleapis.com serves Access-Control-Allow-Origin: * on
+// success and is fetched directly by the am-lyrics component for both
+// translation (dt=t) and romanization/pronunciation (dt=rm). Routing it
+// through the proxy chain breaks both features: the same-origin
+// /cors-proxy/ route does not exist on Appwrite Sites (400/404 from the
+// Appwrite router), and the public fallbacks reject Google (corsproxy.io
+// 403s, allorigins 520s). Keep it direct.
 const CORS_SUPPORTED_HOSTS = new Set([
+    'translate.googleapis.com',
+    'translate.google.com',
     'sgp.cloud.appwrite.io',
     'cloud.appwrite.io',
     'fra.cloud.appwrite.io',
