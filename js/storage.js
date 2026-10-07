@@ -657,10 +657,10 @@ export const qualityBadgeSettings = {
 
     isEnabled() {
         try {
-            const val = localStorage.getItem(this.STORAGE_KEY);
-            return val === null ? true : val === 'true';
+            // Default to false if not set (disc off unless the user enables it)
+            return localStorage.getItem(this.STORAGE_KEY) === 'true';
         } catch {
-            return true;
+            return false;
         }
     },
 
