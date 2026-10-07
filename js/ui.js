@@ -56,6 +56,7 @@ import {
 } from './tracker.js';
 import { scrollToTop } from './smooth-scrolling.js';
 import { fetchAllLastFmUserRecentTracks, fetchLastFmUserRecentTracks } from './lastfm.js';
+import { renderArtistSignature } from './artist-signature.js';
 
 const deriveArtistsFromTracks = (tracks) => {
     const artistMap = new Map();
@@ -7938,6 +7939,12 @@ export class UIRenderer {
             this.extractAndApplyColor(artistPic160);
 
             this.adjustTitleFontSize(nameEl, artist.name);
+
+            // Artist signature: show the handwritten signature (Wikimedia
+            // Commons via the artist-signature package) instead of the plain
+            // name. Falls back to the name when none is found. Async and
+            // token-guarded so it never blocks or overwrites a newer render.
+            renderArtistSignature(nameEl, artist.name, () => renderToken === this._artistRenderToken);
 
             metaEl.innerHTML = '';
             metaEl.style.display = 'none';

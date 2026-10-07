@@ -19010,6 +19010,33 @@ button:active {
     font-size: clamp(1.6rem, 3vw, 2.4rem);
 }
 
+/* Handwritten artist signature (Wikimedia Commons via artist-signature)
+   shown instead of the plain artist name. Signature files are dark ink on a
+   transparent/white canvas, so they are inverted on dark themes; blend modes
+   dissolve any leftover white canvas into the hero artwork. */
+.artist-hero-title.has-signature {
+    line-height: 1;
+}
+
+.artist-signature-img {
+    display: block;
+    height: clamp(6rem, 16vw, 14rem);
+    width: auto;
+    max-width: min(94%, 44rem);
+    object-fit: contain;
+    object-position: left center;
+    background: transparent;
+    background-color: transparent;
+    filter: invert(1) drop-shadow(0 2px 12px rgb(0 0 0 / 0.45));
+    mix-blend-mode: screen;
+}
+
+:root[data-theme='latte'] .artist-signature-img,
+:root[data-theme='white'] .artist-signature-img {
+    filter: drop-shadow(0 1px 8px rgb(0 0 0 / 0.18));
+    mix-blend-mode: multiply;
+}
+
 .artist-hero-meta {
     font-size: 0.88rem;
     color: rgb(255, 255, 255, 0.8);

@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import { execSync } from 'node:child_process';
+import path from 'node:path';
 import { VitePWA } from 'vite-plugin-pwa';
 import authGatePlugin from './vite-plugin-auth-gate.js';
 import nodeFetch from './vite-plugin-proxy-fetch.js';
@@ -7,6 +8,13 @@ import discordBridgePlugin from './vite-plugin-discord-bridge.js';
 
 const APP_REPO_URL = 'https://github.com/itsmeadarsh2008/wesper';
 const APP_REPO_API = 'https://api.github.com/repos/itsmeadarsh2008/wesper';
+
+// artist-signature is installed straight from GitHub as a monorepo, so its
+// workspace packages (@artist-signatures/*) are aliased here. This lets the
+// browser bundle the serverless Direct lookup (live Wikimedia Commons +
+// MusicBrainz, no API server) used for artist signatures.
+const vendorSignaturesRoot = path.resolve('node_modules/artist-signatures');
+const vendorSignaturesPkg = (subpath) => path.join(vendorSignaturesRoot, subpath);
 
 // Prefer the local git HEAD. When building from a GitHub ZIP (no .git folder)
 // fall back to the branch tip reported by the GitHub API, so the About section
@@ -57,6 +65,10 @@ export default defineConfig(async () => {
         resolve: {
             alias: {
                 pocketbase: '/node_modules/pocketbase/dist/pocketbase.es.js',
+                '@artist-signatures/direct': vendorSignaturesPkg('packages/direct/src/index.ts'),
+                '@artist-signatures/parser': vendorSignaturesPkg('packages/parser/src/index.ts'),
+                '@artist-signatures/resolver': vendorSignaturesPkg('packages/resolver/src/index.ts'),
+                '@artist-signatures/types': vendorSignaturesPkg('packages/types/src/index.ts'),
             },
         },
         optimizeDeps: {

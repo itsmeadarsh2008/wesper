@@ -56,6 +56,7 @@
         "@ffmpeg/util": "^0.12.2",
         "@tabler/icons": "^3.46.0",
         "appwrite": "^26.2.0",
+        "artist-signatures": "https://github.com/itsmeadarsh2008/artist-signature/archive/fa51ed8.tar.gz",
         "butterchurn": "^2.6.7",
         "butterchurn-presets": "^2.4.7",
         "dashjs": "^5.2.0",
