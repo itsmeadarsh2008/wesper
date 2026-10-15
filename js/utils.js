@@ -3,6 +3,7 @@ import { qualityBadgeSettings, coverArtSizeSettings, trackDateSettings } from '.
 import { METADATA_STRINGS } from './METADATA_STRINGS.js';
 import {
     SVG_ATMOS,
+    SVG_APPLE,
     SVG_PLAY,
     SVG_PAUSE,
     SVG_PLAY_MINI,
@@ -417,6 +418,9 @@ export const createQualityBadgeHTML = (track, adaptiveQuality = null) => {
     return '';
 };
 
+const hiresLabelHtml = () =>
+    `<span class="fs-quality-tag fs-quality-hires" title="Hi-Res Lossless">${SVG_APPLE(21)}<span>HI-RES LOSSLESS</span></span>`;
+
 export const createFullscreenQualityHTML = (track) => {
     if (!track) return '';
 
@@ -503,55 +507,55 @@ export const createFullscreenQualityHTML = (track) => {
         sampleRateStr = null;
     }
 
-    // Determine quality label and logo
-    let qualityLabel = '';
-    let logoHtml = '';
+    // Determine quality label and logo (TIDAL-style caps with marks)
+    let labelHtml;
 
     if (quality === 'DOLBY_ATMOS') {
-        // For Dolby Atmos, just show the logo (the badge already shows "Atmos" and title may have it)
-        logoHtml = SVG_ATMOS(16);
+        // For Dolby Atmos, logo + caps label (the badge already shows "Atmos" and title may have it)
+        labelHtml = `<span class="fs-quality-tag" title="Dolby Atmos">${SVG_ATMOS(16)}<span>DOLBY ATMOS</span></span>`;
     } else if (lossy) {
         // Lossy format overrides any lossless claim
-        qualityLabel = 'High';
+        labelHtml = 'HIGH';
     } else if (quality === 'HI_RES_LOSSLESS') {
-        qualityLabel = 'Hi-Res Lossless';
+        labelHtml = hiresLabelHtml();
     } else if (quality === 'LOSSLESS') {
-        qualityLabel = 'Lossless';
+        labelHtml = `<span class="fs-quality-tag fs-quality-lossless" title="Lossless">${SVG_APPLE(21)}<span>LOSSLESS</span></span>`;
     } else if (quality === 'HIGH') {
-        qualityLabel = 'High';
+        labelHtml = 'HIGH';
     } else if (quality === 'LOW') {
-        qualityLabel = 'Low';
+        labelHtml = 'LOW';
     } else {
         // Unknown quality - try to infer from bit depth and sample rate
         if (bitDepth && sampleRate) {
             if (bitDepth >= 24 && sampleRate > 48000) {
-                qualityLabel = 'Hi-Res Lossless';
+                labelHtml = hiresLabelHtml();
             } else if (bitDepth >= 24 || sampleRate > 44100) {
-                qualityLabel = 'Lossless';
+                labelHtml = `<span class="fs-quality-tag fs-quality-lossless" title="Lossless">${SVG_APPLE(21)}<span>LOSSLESS</span></span>`;
             } else {
-                qualityLabel = 'Lossless';
+                labelHtml = `<span class="fs-quality-tag fs-quality-lossless" title="Lossless">${SVG_APPLE(21)}<span>LOSSLESS</span></span>`;
             }
         } else if (bitDepth) {
-            qualityLabel = bitDepth >= 24 ? 'Hi-Res Lossless' : 'Lossless';
+            labelHtml =
+                bitDepth >= 24
+                    ? hiresLabelHtml()
+                    : `<span class="fs-quality-tag fs-quality-lossless" title="Lossless">${SVG_APPLE(21)}<span>LOSSLESS</span></span>`;
         } else if (sampleRate) {
-            qualityLabel = sampleRate > 48000 ? 'Hi-Res Lossless' : 'Lossless';
+            labelHtml =
+                sampleRate > 48000
+                    ? hiresLabelHtml()
+                    : `<span class="fs-quality-tag fs-quality-lossless" title="Lossless">${SVG_APPLE(21)}<span>LOSSLESS</span></span>`;
         } else {
             // Default to Lossless if we can't determine
-            qualityLabel = 'Lossless';
+            labelHtml = `<span class="fs-quality-tag fs-quality-lossless" title="Lossless">${SVG_APPLE(21)}<span>LOSSLESS</span></span>`;
         }
     }
 
     // Build the display string
     const parts = [];
 
-    // Add logo if present (Dolby Atmos)
-    if (logoHtml) {
-        parts.push(logoHtml);
-    }
-
-    // Add quality label (only if not empty)
-    if (qualityLabel) {
-        parts.push(qualityLabel);
+    // Add quality label with logo (only if not empty)
+    if (labelHtml) {
+        parts.push(labelHtml);
     }
 
     // Add bit depth

@@ -6230,6 +6230,57 @@ input:checked + .slider::before {
     }
 }
 
+/* Left-side artwork backdrop: full-height cover art blended into the
+   background. Reuses --bg-image (set on the overlay by JS), so no extra
+   plumbing is needed. Hidden while video/visualizer backgrounds are active. */
+#fs-art-side {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    translate: 0 -50%;
+    width: min(100vh, 96vw);
+    aspect-ratio: 1 / 1;
+    background-image: var(--bg-image);
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    filter: saturate(1.06) brightness(0.92);
+    opacity: 0.85;
+    pointer-events: none;
+    mask-image: linear-gradient(to right, #000 52%, transparent 98%);
+    transition: opacity 0.3s ease;
+}
+
+#fullscreen-cover-overlay.video-bg-active #fs-art-side,
+#fullscreen-cover-overlay.video-visualizer-active #fs-art-side {
+    opacity: 0;
+}
+
+@media (max-width: 768px) {
+    #fs-art-side {
+        top: 0;
+        bottom: auto;
+        left: 0;
+        right: 0;
+        translate: none;
+        width: 100%;
+        height: 44vh;
+        aspect-ratio: auto;
+        background-position: center 30%;
+        opacity: 0.5;
+        mask-image: linear-gradient(to bottom, #000 45%, transparent 98%);
+    }
+}
+
+@media (min-width: 769px) {
+    /* The full square carries the artwork — the small centered square is
+       redundant, so hide it. The vinyl disc keeps its label (part of the
+       disc), so the tilt stays while rotating-disc is active. */
+    #fullscreen-cover-tilt:not(:has(#vinyl-disc-container.rotating-disc)) {
+        display: none;
+    }
+}
+
 /* Blurred animated cover background */
 #fullscreen-cover-overlay::before {
     content: '';
@@ -6657,6 +6708,7 @@ input:checked + .slider::before {
     padding: 0.25rem 0;
     border: none;
     box-shadow: none;
+    margin-top: auto;
 }
 
 #fullscreen-track-title {
@@ -7027,6 +7079,10 @@ input:checked + .slider::before {
     max-height: 100%;
     overflow-x: hidden;
     overflow-y: auto;
+
+    /* Stretch to full height (parent uses align-items: center) so the
+       margin-top: auto on track info / controls can pin them to the bottom. */
+    align-self: stretch;
 }
 
 #fullscreen-cover-overlay .fullscreen-track-info {
@@ -7046,6 +7102,20 @@ input:checked + .slider::before {
     font-size: clamp(0.76rem, 2.4vw, 0.95rem);
     line-height: 1.3;
     flex-wrap: wrap;
+}
+
+.fs-quality-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35em;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+}
+
+.fs-quality-tag svg {
+    display: block;
+    flex-shrink: 0;
 }
 
 #fullscreen-cover-overlay .fullscreen-actions {
@@ -12779,6 +12849,14 @@ body.side-panel-open .fullscreen-main-view {
         padding-right 0.3s ease,
         margin-right 0.3s ease;
     padding-right: var(--active-side-panel-width, 600px);
+}
+
+@media (min-width: 1201px) {
+    /* Lyrics open in fullscreen: pin the info + controls column to the
+       bottom of the remaining space instead of vertically centering it. */
+    body.side-panel-lyrics-open .fullscreen-main-view {
+        justify-content: flex-end;
+    }
 }
 
 body:has(#side-panel.active) .fullscreen-lyrics-toggle {
@@ -20027,120 +20105,3 @@ button:active {
 #page-home #home-recommended-albums > .card .card-image {
     border-radius: 15px 15px 0 0;
 }
-/* Left-side artwork backdrop: full-height cover art blended into the
-   background. Reuses --bg-image (set on the overlay by JS), so no extra
-   plumbing is needed. Hidden while video/visualizer backgrounds are active. */
-#fs-art-side {
-    position: absolute;
-    left: 0;
-    top: 50%;
-    translate: 0 -50%;
-    width: min(100vh, 96vw);
-    aspect-ratio: 1 / 1;
-    background-image: var(--bg-image);
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    filter: saturate(1.06) brightness(0.92);
-    opacity: 0.85;
-    pointer-events: none;
-    mask-image: linear-gradient(to right, #000 52%, transparent 98%);
-    transition: opacity 0.3s ease;
-}
-
-#fullscreen-cover-overlay.video-bg-active #fs-art-side,
-#fullscreen-cover-overlay.video-visualizer-active #fs-art-side {
-    opacity: 0;
-}
-
-@media (max-width: 768px) {
-    #fs-art-side {
-        top: 0;
-        bottom: auto;
-        left: 0;
-        right: 0;
-        translate: none;
-        width: 100%;
-        height: 44vh;
-        aspect-ratio: auto;
-        background-position: center 30%;
-        opacity: 0.5;
-        mask-image: linear-gradient(to bottom, #000 45%, transparent 98%);
-    }
-}
-
-@media (min-width: 769px) {
-    /* The full square carries the artwork — the small centered square is
-       redundant, so hide it. The vinyl disc keeps its label (part of the
-       disc), so the tilt stays while rotating-disc is active. */
-    #fullscreen-cover-tilt:not(:has(#vinyl-disc-container.rotating-disc)) {
-        display: none;
-    }
-}
-
-/* Left-side artwork backdrop: full-height cover art blended into the
-   background. Reuses --bg-image (set on the overlay by JS), so no extra
-   plumbing is needed. Hidden while video/visualizer backgrounds are active. */
-#fs-art-side {
-    position: absolute;
-    left: 0;
-    top: 50%;
-    translate: 0 -50%;
-    width: min(100vh, 96vw);
-    aspect-ratio: 1 / 1;
-    background-image: var(--bg-image);
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    filter: saturate(1.06) brightness(0.92);
-    opacity: 0.85;
-    pointer-events: none;
-    mask-image: linear-gradient(to right, #000 52%, transparent 98%);
-    transition: opacity 0.3s ease;
-}
-
-#fullscreen-cover-overlay.video-bg-active #fs-art-side,
-#fullscreen-cover-overlay.video-visualizer-active #fs-art-side {
-    opacity: 0;
-}
-
-@media (max-width: 768px) {
-    #fs-art-side {
-        top: 0;
-        bottom: auto;
-        left: 0;
-        right: 0;
-        translate: none;
-        width: 100%;
-        height: 44vh;
-        aspect-ratio: auto;
-        background-position: center 30%;
-        opacity: 0.5;
-        mask-image: linear-gradient(to bottom, #000 45%, transparent 98%);
-    }
-}
-
-@media (min-width: 769px) {
-    /* The full square carries the artwork — the small centered square is
-       redundant, so hide it. The vinyl disc keeps its label (part of the
-       disc), so the tilt stays while rotating-disc is active. */
-    #fullscreen-cover-tilt:not(:has(#vinyl-disc-container.rotating-disc)) {
-        display: none;
-    }
-}
-
-    margin-top: auto;
-.fs-quality-tag {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35em;
-    font-weight: 800;
-    letter-spacing: 0.08em;
-    white-space: nowrap;
-}
-
-.fs-quality-tag svg {
-    display: block;
-    flex-shrink: 0;
-}
-

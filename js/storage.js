@@ -2019,18 +2019,95 @@ export const fontSettings = {
     async loadGoogleFont(familyName) {
         // Validate familyName to prevent injection
         if (!familyName || typeof familyName !== 'string') {
-            return;
+            return false;
         }
         // Only allow alphanumeric, spaces, and basic punctuation in font names
-        const sanitizedFamily = familyName.replace(/[^a-zA-Z0-9\s\-_,.]/g, '');
+        const sanitizedFamily = familyName.replace(/[^a-zA-Z0-9\s\-_,.]/g, '').trim();
         if (!sanitizedFamily) {
-            return;
+            return false;
         }
 
         const encodedFamily = encodeURIComponent(sanitizedFamily);
         // CoolLabs proxy is the default Google Fonts provider (privacy-friendly mirror)
         const url = `https://api.fonts.coollabs.io/css2?family=${encodedFamily}:wght@100;200;300;400;500;600;700;800;900&display=swap`;
 
+        try {
+            // Fast path: family already available (bundled, installed, or cached).
+            if (this._isFamilyAvailable(sanitizedFamily)) {
+                this._activateGoogleFont(familyName, url);
+                return true;
+            }
+            // Load via a temporary stylesheet so a failure never destroys the
+            // currently working font. Only persist once glyphs are verified.
+            const tempLink = await this._loadTempStylesheet(url);
+            try {
+                await this._verifyFamily(sanitizedFamily);
+            } finally {
+                tempLink.remove();
+            }
+            this._activateGoogleFont(familyName, url);
+            return true;
+        } catch {
+            return false;
+        }
+    },
+
+    _isFamilyAvailable(family) {
+        try {
+            return (
+                typeof document !== 'undefined' && !!document.fonts?.check && document.fonts.check(`16px "${family}"`)
+            );
+        } catch {
+            return false;
+        }
+    },
+
+    _loadTempStylesheet(url, timeoutMs = 15000) {
+        // Resolves with the live <link>; the caller must remove it after
+        // verification, since @font-face fetching needs the sheet present.
+        return new Promise((resolve, reject) => {
+            const link = document.createElement('link');
+            link.rel = 'stylesheet';
+            link.href = url;
+            const timer = setTimeout(() => {
+                link.remove();
+                reject(new Error('Font stylesheet timed out'));
+            }, timeoutMs);
+            link.onload = () => {
+                clearTimeout(timer);
+                resolve(link);
+            };
+            link.onerror = () => {
+                clearTimeout(timer);
+                link.remove();
+                reject(new Error('Font stylesheet failed to load'));
+            };
+            document.head.appendChild(link);
+        });
+    },
+
+    async _verifyFamily(family, timeoutMs = 15000) {
+        if (typeof document === 'undefined' || !document.fonts?.load) return;
+        const check = async () => {
+            await Promise.all([
+                document.fonts.load(`400 16px "${family}"`),
+                document.fonts.load(`700 16px "${family}"`),
+            ]);
+            let loaded = false;
+            try {
+                loaded = document.fonts.check(`16px "${family}"`);
+            } catch {
+                // keep default
+            }
+            if (!loaded) throw new Error(`Font "${family}" did not load`);
+        };
+        await Promise.race([
+            check(),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Font verification timed out')), timeoutMs)),
+        ]);
+    },
+
+    _activateGoogleFont(familyName, url) {
         let link = document.getElementById(this.FONT_LINK_ID);
         if (!link) {
             link = document.createElement('link');
@@ -2038,8 +2115,13 @@ export const fontSettings = {
             link.rel = 'stylesheet';
             document.head.appendChild(link);
         }
+        if (link.getAttribute('href') !== url) {
+            link.setAttribute('href', url);
+        }
 
-        link.href = url;
+        // A Google family must not compete with @font-face / Apple artifacts.
+        this._clearFontFaceStyle();
+        this._clearAppleFontLink();
 
         this.setConfig({
             type: 'google',
@@ -2049,6 +2131,18 @@ export const fontSettings = {
         });
 
         document.documentElement.style.setProperty('--font-family', `'${familyName}', sans-serif`);
+    },
+
+    _clearGoogleFontLink() {
+        document.getElementById(this.FONT_LINK_ID)?.remove();
+    },
+
+    _clearFontFaceStyle() {
+        document.getElementById(this.FONT_FACE_ID)?.remove();
+    },
+
+    _clearAppleFontLink() {
+        document.getElementById('monochrome-apple-font')?.remove();
     },
 
     async loadFontFromUrl(url, familyName) {
@@ -2074,6 +2168,9 @@ export const fontSettings = {
                 font-display: swap;
             }
         `;
+
+        this._clearGoogleFontLink();
+        this._clearAppleFontLink();
 
         this.setConfig({
             type: 'url',
@@ -2158,6 +2255,9 @@ export const fontSettings = {
             }
         `;
 
+        this._clearGoogleFontLink();
+        this._clearAppleFontLink();
+
         this.setConfig({
             type: 'uploaded',
             family: fontFamily,
@@ -2176,15 +2276,9 @@ export const fontSettings = {
     },
 
     loadPresetFont(family, fallback = 'sans-serif') {
-        let link = document.getElementById(this.FONT_LINK_ID);
-        if (link) {
-            link.remove();
-        }
-
-        let style = document.getElementById(this.FONT_FACE_ID);
-        if (style) {
-            style.remove();
-        }
+        this._clearGoogleFontLink();
+        this._clearFontFaceStyle();
+        this._clearAppleFontLink();
 
         this.setConfig({
             type: 'preset',
@@ -2849,9 +2943,9 @@ export const audioProcessingSettings = {
 
     getMode() {
         try {
-            return localStorage.getItem(this.STORAGE_KEY) || 'pure';
+            return localStorage.getItem(this.STORAGE_KEY) || 'normalized';
         } catch {
-            return 'pure';
+            return 'normalized';
         }
     },
 

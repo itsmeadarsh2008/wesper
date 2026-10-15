@@ -815,6 +815,27 @@ export class Player {
 
         const el = this.activeElement || this.audio;
 
+        // Pure mode: bit-perfect path. No ReplayGain, pre-amp, or volume
+        // curve — the linear user volume goes straight to the element (and
+        // Howler's own node). At 100% the decoded samples pass through
+        // untouched; anything lower is honest user attenuation.
+        if (audioProcessingSettings.isPure()) {
+            const linear = Math.max(0, Math.min(1, this.userVolume));
+            if (this._howlerSound) {
+                try {
+                    this._howlerSound.volume(linear);
+                    this._howlerSound.mute(Boolean(el.muted));
+                } catch {
+                    /* ignore */
+                }
+            }
+            if (audioContextManager.isReady()) {
+                audioContextManager.setVolume(1.0);
+            }
+            el.volume = linear;
+            return;
+        }
+
         // Apply to the Howler sound when it's the active playback engine — it
         // uses its own HTML5 audio node, so element/graph volume wouldn't reach it.
         if (this._howlerSound) {
@@ -1287,7 +1308,11 @@ export class Player {
             // Non-blocking — playback is never delayed by the inspection.
             if (typeof streamUrl === 'string' && !streamUrl.startsWith('blob:')) {
                 const inspectedTrack = track;
-                inspectStreamMetadata(streamUrl, { isHls, duration: Number(track.duration) || 0 })
+                inspectStreamMetadata(streamUrl, {
+                    isHls,
+                    isDash,
+                    duration: Number(track.duration) || 0,
+                })
                     .then((real) => {
                         if (isStalePlay() || this.currentTrack !== inspectedTrack) return;
                         if (Object.keys(real).length === 0) return;

@@ -132,6 +132,45 @@ function trackHasAsianText(track) {
     const artist = getTrackArtists(track) || '';
     return containsAsianText(title) || containsAsianText(artist);
 }
+
+// Remove surrounding braces from echo-style lyric lines: "(Don't rush)"
+// renders as "Don't rush". Only unwraps when the whole line is wrapped, so
+// mid-line phrasing is never altered. Lone brace characters collapse to ''.
+function unwrapLyricBraces(text) {
+    if (typeof text !== 'string') return text;
+    const trimmed = text.trim();
+    if (trimmed.length === 0) return text;
+    if (trimmed === '(' || trimmed === ')' || trimmed === '[' || trimmed === ']') return '';
+    if (trimmed.length < 2) return text;
+    const first = trimmed[0];
+    const last = trimmed[trimmed.length - 1];
+    if ((first === '(' && last === ')') || (first === '[' && last === ']')) {
+        const inner = trimmed.slice(1, -1).trim();
+        return inner === '' ? text : inner;
+    }
+    return text;
+}
+
+// Strip braces from component-rendered lyric text nodes (vendor providers
+// render into shadow DOM, so this walks the live tree). Idempotent: only
+// assigns when something actually changed, so the MutationObserver settles.
+function stripLyricBraces(root) {
+    if (!root || typeof document === 'undefined') return;
+    const skipTags = new Set(['script', 'style', 'code', 'input', 'textarea', 'time']);
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null, false);
+    let node;
+    while ((node = walker.nextNode())) {
+        if (!node.parentElement) continue;
+        const parentTag = node.parentElement.tagName?.toLowerCase() || '';
+        if (skipTags.has(parentTag)) continue;
+        const current = node.textContent;
+        if (!current || current.trim().length === 0) continue;
+        const cleaned = unwrapLyricBraces(current);
+        if (cleaned !== current) {
+            node.textContent = cleaned;
+        }
+    }
+}
 const SVG_GENIUS_INACTIVE = `<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="opacity: 0.7;"><path d="M12 24c6.627 0 12-5.373 12-12S18.627 0 12 0 0 5.373 0 12s5.373 12 12 12z" /><path d="M6.3 6.3h11.4v11.4H6.3z" fill="var(--card)"/></svg>`;
 
 // Update the panel track info (cover, title, artist, quality) for mobile mode
@@ -745,7 +784,7 @@ export class LyricsManager {
                 if (match) {
                     const [, minutes, seconds, centiseconds, text] = match;
                     const timeInSeconds = parseInt(minutes) * 60 + parseInt(seconds) + parseInt(centiseconds) / 100;
-                    return { time: timeInSeconds, text: text.trim() };
+                    return { time: timeInSeconds, text: unwrapLyricBraces(text.trim()) };
                 }
                 return null;
             })
@@ -792,7 +831,7 @@ export class LyricsManager {
         if (!lyrics) return null;
         const paragraphs = String(lyrics)
             .split('\n')
-            .map((line) => `        <p>${this._escapeXmlText(line)}</p>`)
+            .map((line) => `        <p>${this._escapeXmlText(unwrapLyricBraces(line))}</p>`)
             .join('\n');
         return `<tt xmlns="http://www.w3.org/ns/ttml" xml:lang="en">\n  <body>\n    <div>\n${paragraphs}\n    </div>\n  </body>\n</tt>`;
     }
@@ -890,6 +929,7 @@ export class LyricsManager {
             }
             this.observerTimeout = setTimeout(async () => {
                 this.scheduleKaraokeWordLayout(amLyricsElement);
+                stripLyricBraces(amLyricsElement.shadowRoot || amLyricsElement);
                 if (this.isRomajiMode) {
                     await this.convertLyricsContent(amLyricsElement);
                     this.scheduleKaraokeWordLayout(amLyricsElement);
