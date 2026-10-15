@@ -3819,10 +3819,19 @@ export class UIRenderer {
 
         const refreshSongsBtn = document.getElementById('refresh-songs-btn');
         const openFriendsBtn = document.getElementById('home-friends-open-btn');
+        const hideFriendsBtn = document.getElementById('home-friends-hide-btn');
         const clearRecentBtn = document.getElementById('clear-recent-btn');
 
         if (refreshSongsBtn) refreshSongsBtn.onclick = () => this.renderHomeSongs(true);
         if (openFriendsBtn) openFriendsBtn.onclick = () => navigate('/friends');
+        if (hideFriendsBtn)
+            hideFriendsBtn.onclick = () => {
+                homePageSettings.setShowFriendsActivity(false);
+                const toggle = document.getElementById('show-friends-activity-toggle');
+                if (toggle) toggle.checked = false;
+                const section = document.getElementById('home-friends-activity-section');
+                if (section) section.style.display = 'none';
+            };
         if (clearRecentBtn)
             clearRecentBtn.onclick = () => {
                 if (confirm('Clear recent activity?')) {
@@ -5258,6 +5267,55 @@ export class UIRenderer {
         const empty = document.getElementById('home-friends-activity-empty');
         if (!section || !grid || !empty) return;
 
+        const liveCount = document.getElementById('home-friends-live-count');
+        const setLiveCount = (count) => {
+            if (!liveCount) return;
+            if (count > 0) {
+                liveCount.textContent = `${count} live`;
+                liveCount.style.display = '';
+            } else {
+                liveCount.textContent = '';
+                liveCount.style.display = 'none';
+            }
+        };
+
+        if (!homePageSettings.shouldShowFriendsActivity()) {
+            section.style.display = 'none';
+            return;
+        }
+        section.style.display = '';
+
+        const privateMode = homePageSettings.shouldHideFriendsDetails();
+
+        const renderSkeletons = (count) => {
+            grid.innerHTML = Array.from(
+                { length: Math.max(1, Math.min(count || 4, 8)) },
+                () => `
+                <article class="home-friend-activity-card skeleton-card" aria-hidden="true">
+                    <div class="home-friend-activity-head">
+                        <div class="skeleton skeleton-avatar"></div>
+                        <div class="skeleton-lines">
+                            <div class="skeleton skeleton-line"></div>
+                            <div class="skeleton skeleton-line short"></div>
+                        </div>
+                    </div>
+                    <div class="home-friend-activity-body">
+                        <div class="skeleton skeleton-cover"></div>
+                        <div class="skeleton-lines">
+                            <div class="skeleton skeleton-line"></div>
+                            <div class="skeleton skeleton-line short"></div>
+                        </div>
+                    </div>
+                </article>`
+            ).join('');
+            empty.style.display = 'none';
+        };
+
+        // Paint skeletons immediately so the section never flashes empty.
+        if (!grid.querySelector('.home-friend-activity-card:not(.skeleton-card)')) {
+            renderSkeletons(4);
+        }
+
         const getStatusPayload = (status) => {
             if (!status || typeof status !== 'string') return null;
             try {
@@ -5376,8 +5434,12 @@ export class UIRenderer {
                 empty.innerHTML = '<p>Add friends to start seeing live listening activity.</p>';
                 empty.style.display = '';
                 section.style.display = '';
+                setLiveCount(0);
                 return;
             }
+
+            // Refresh skeletons to match the real card count while profiles load.
+            renderSkeletons(friendList.length);
 
             if (useCloudSocial) {
                 await Promise.allSettled(
@@ -5395,8 +5457,9 @@ export class UIRenderer {
                 );
             }
 
+            let nowPlayingCount = 0;
             grid.innerHTML = friendList
-                .map((friend) => {
+                .map((friend, index) => {
                     const username = String(friend.username || '').trim();
                     const displayName = escapeHtml(friend.displayName || username || 'Friend');
                     const safeUsername = escapeHtml(username);
@@ -5404,16 +5467,47 @@ export class UIRenderer {
                     const statusText = statusPayload?.text || getDisplayStatusText(friend.status);
                     const profileUpdatedAtMs = toTimestamp(friend.profileUpdatedAt || 0);
                     const hasNowPlaying = isNowPlayingFresh(statusPayload, profileUpdatedAtMs);
+                    if (hasNowPlaying) nowPlayingCount += 1;
                     const statusLabel = hasNowPlaying ? 'Now Playing' : 'Inactive';
                     const statusClass = hasNowPlaying ? 'active' : 'inactive';
-                    const statusImage = resolveStatusImage(statusPayload?.image || '');
-                    const internalTrackPath = toInternalPath(statusPayload?.link || '');
+                    const statusImage = privateMode
+                        ? '/assets/appicon.png'
+                        : resolveStatusImage(statusPayload?.image || '');
+                    const internalTrackPath = privateMode ? '' : toInternalPath(statusPayload?.link || '');
                     const hasLastTrack = Boolean(statusText);
                     const lastActiveAtMs = Math.max(
                         profileUpdatedAtMs,
                         toTimestamp(statusPayload?.updatedAt || 0),
                         toTimestamp(friend.updatedAt || 0)
                     );
+
+                    if (privateMode) {
+                        return `
+                        <article class="home-friend-activity-card ${statusClass} private" aria-label="Hidden friend ${index + 1}">
+                            <div class="home-friend-activity-head">
+                                <div class="home-friend-activity-avatar">
+                                    <img src="/assets/appicon.png" alt="Hidden friend" loading="lazy" />
+                                    <span class="home-friend-presence ${statusClass}"></span>
+                                </div>
+                                <div class="home-friend-activity-identity">
+                                    <h3>Friend ${index + 1}</h3>
+                                    <p>Hidden profile</p>
+                                </div>
+                                <span class="home-friend-activity-badge ${statusClass}">${statusLabel}</span>
+                            </div>
+                            <div class="home-friend-activity-body">
+                                <div class="home-friend-activity-cover">
+                                    <img src="/assets/appicon.png" alt="Hidden listening activity" loading="lazy" />
+                                </div>
+                                <div class="home-friend-activity-meta">
+                                    <p class="home-friend-activity-track">Listening details hidden.</p>
+                                    <p class="home-friend-activity-last-seen">Turn off “Hide Friend Names &amp; Tracks” in settings to reveal.</p>
+                                </div>
+                            </div>
+                        </article>
+                    `;
+                    }
+
                     const trackLine = hasNowPlaying
                         ? escapeHtml(statusText)
                         : hasLastTrack
@@ -5423,10 +5517,11 @@ export class UIRenderer {
                         !hasNowPlaying && hasLastTrack ? escapeHtml(formatLastActiveText(lastActiveAtMs)) : '';
 
                     return `
-                        <article class="home-friend-activity-card ${statusClass}" data-username="${safeUsername}">
+                        <article class="home-friend-activity-card ${statusClass}" data-username="${safeUsername}" title="${displayName}">
                             <div class="home-friend-activity-head">
                                 <div class="home-friend-activity-avatar">
                                     <img src="${friend.avatarUrl || '/assets/appicon.png'}" alt="${displayName}" loading="lazy" onerror="this.onerror=null;this.src='/assets/appicon.png';" />
+                                    <span class="home-friend-presence ${statusClass}"></span>
                                 </div>
                                 <div class="home-friend-activity-identity">
                                     <h3>${displayName}</h3>
@@ -5437,6 +5532,7 @@ export class UIRenderer {
                             <div class="home-friend-activity-body">
                                 <div class="home-friend-activity-cover">
                                     <img src="${statusImage}" alt="${hasNowPlaying ? 'Now playing cover' : hasLastTrack ? 'Last played cover' : 'Inactive cover'}" loading="lazy" />
+                                    ${hasNowPlaying ? '<span class="home-friend-eq" aria-hidden="true"><i></i><i></i><i></i></span>' : ''}
                                 </div>
                                 <div class="home-friend-activity-meta">
                                     <p class="home-friend-activity-track">${trackLine}</p>
@@ -5458,6 +5554,7 @@ export class UIRenderer {
 
             empty.style.display = 'none';
             section.style.display = '';
+            setLiveCount(nowPlayingCount);
 
             grid.querySelectorAll('.home-friend-profile-btn').forEach((button) => {
                 button.addEventListener('click', (event) => {
@@ -5493,6 +5590,7 @@ export class UIRenderer {
             empty.innerHTML = '<p>Unable to load friend activity right now.</p>';
             empty.style.display = '';
             section.style.display = '';
+            setLiveCount(0);
         }
     }
 

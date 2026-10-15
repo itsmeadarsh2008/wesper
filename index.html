@@ -1283,8 +1283,8 @@
                 <div class="missing-tracks-content">
                     <p>
                         Unfortunately, some songs weren't able to be added. This could be an issue with our import
-                        system - try searching for the song and adding it. It could also be due to Wesper not
-                        having the song :(
+                        system - try searching for the song and adding it. It could also be due to Wesper not having the
+                        song :(
                     </p>
                     <div class="missing-tracks-list">
                         <h4>Missing Tracks:</h4>
@@ -2158,7 +2158,6 @@
                         </p>
                     </div>
 
-
                     <div id="home-content" style="display: none">
                         <section class="content-section">
                             <div
@@ -2196,12 +2195,48 @@
                             <div class="section-head section-head-compact section-head-discovery">
                                 <div>
                                     <p class="section-eyebrow">Social</p>
-                                    <h2 class="section-title" style="margin-bottom: 0">Friends Activity</h2>
+                                    <h2 class="section-title" style="margin-bottom: 0">
+                                        Friends Activity
+                                        <span
+                                            id="home-friends-live-count"
+                                            class="home-friends-live-count"
+                                            style="display: none"
+                                        ></span>
+                                    </h2>
                                     <p class="section-subtitle">
                                         See what your friends are currently playing, or who is inactive.
                                     </p>
                                 </div>
-                                <button id="home-friends-open-btn" class="btn-secondary">Open Friends</button>
+                                <div class="home-friends-head-actions">
+                                    <button
+                                        id="home-friends-hide-btn"
+                                        class="btn-icon"
+                                        title="Hide friends activity"
+                                        aria-label="Hide friends activity"
+                                    >
+                                        <svg
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            width="16"
+                                            height="16"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            stroke-width="2"
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                        >
+                                            <path
+                                                d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"
+                                            />
+                                            <path
+                                                d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"
+                                            />
+                                            <path d="M14.12 14.12a3 3 0 1 1-4.24-4.24" />
+                                            <line x1="2" x2="22" y1="2" y2="22" />
+                                        </svg>
+                                    </button>
+                                    <button id="home-friends-open-btn" class="btn-secondary">Open Friends</button>
+                                </div>
                             </div>
                             <div id="home-friends-activity-grid" class="home-friends-activity-grid"></div>
                             <div id="home-friends-activity-empty" class="empty-state" style="display: none">
@@ -4333,6 +4368,31 @@
                                         <span class="slider"></span>
                                     </label>
                                 </div>
+                                <div class="setting-item">
+                                    <div class="info">
+                                        <span class="label">Show Friends Activity</span>
+                                        <span class="description"
+                                            >Display the friends activity block on the home page</span
+                                        >
+                                    </div>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="show-friends-activity-toggle" checked />
+                                        <span class="slider"></span>
+                                    </label>
+                                </div>
+                                <div class="setting-item">
+                                    <div class="info">
+                                        <span class="label">Hide Friend Names &amp; Tracks</span>
+                                        <span class="description"
+                                            >Show anonymous cards on the home page instead of names, handles and
+                                            listening details</span
+                                        >
+                                    </div>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="hide-friends-details-toggle" />
+                                        <span class="slider"></span>
+                                    </label>
+                                </div>
                             </div>
 
                             <div class="settings-group" id="sidebar-order-settings-group">
@@ -6456,9 +6516,9 @@
                         </p>
                     </div>
                     <p style="font-size: 0.85rem; color: var(--muted-foreground); margin-top: 1rem">
-                        When the "Pure" Audio Processing setting is enabled, Wesper completely bypasses the
-                        browser's audio processing pipeline, delivering the untouched FLAC bitstream directly to your
-                        device's audio HAL.
+                        When the "Pure" Audio Processing setting is enabled, Wesper completely bypasses the browser's
+                        audio processing pipeline, delivering the untouched FLAC bitstream directly to your device's
+                        audio HAL.
                     </p>
                 </div>
                 <div class="modal-footer" style="text-align: right; margin-top: 1rem">

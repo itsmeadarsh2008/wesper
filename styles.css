@@ -10220,6 +10220,7 @@ img[src=''] {
     100% {
         box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-success) 35%, transparent);
     }
+
     50% {
         box-shadow: 0 0 0 5px color-mix(in srgb, var(--color-success) 0%, transparent);
     }
@@ -13358,6 +13359,8 @@ textarea:focus {
 }
 
 .home-friend-activity-card {
+    position: relative;
+    overflow: hidden;
     border: 1px solid color-mix(in srgb, var(--border) 78%, transparent);
     border-radius: 0.9rem;
     background: linear-gradient(
@@ -13379,6 +13382,18 @@ textarea:focus {
     box-shadow: 0 14px 28px rgb(0 0 0 / 0.22);
 }
 
+.home-friend-activity-card::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto;
+    height: 2px;
+    background: color-mix(in srgb, var(--border) 70%, transparent);
+}
+
+.home-friend-activity-card.active::before {
+    background: linear-gradient(90deg, rgb(34 197 94 / 0.9), rgb(34 197 94 / 0.15));
+}
+
 .home-friend-activity-head {
     display: grid;
     grid-template-columns: 42px minmax(0, 1fr) auto;
@@ -13392,6 +13407,7 @@ textarea:focus {
 }
 
 .home-friend-activity-avatar {
+    position: relative;
     width: 42px;
     height: 42px;
     border-radius: 999px;
@@ -13458,6 +13474,7 @@ textarea:focus {
 }
 
 .home-friend-activity-cover {
+    position: relative;
     width: 76px;
     height: 76px;
     border-radius: 0.7rem;
@@ -13471,6 +13488,7 @@ textarea:focus {
     height: 100%;
     object-fit: cover;
     display: block;
+    transition: transform 0.25s ease;
 }
 
 .home-friend-activity-track {
@@ -13504,6 +13522,208 @@ textarea:focus {
     min-height: 28px;
     padding: 0.28rem 0.5rem;
     font-size: 0.76rem;
+}
+
+.home-friends-head-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+
+.home-friends-live-count {
+    display: inline-block;
+    vertical-align: middle;
+    margin-left: 0.5rem;
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #d7ffe6;
+    background: rgb(34 197 94 / 0.2);
+    border: 1px solid rgb(34 197 94 / 0.45);
+    border-radius: 999px;
+    padding: 0.18rem 0.55rem;
+    animation: home-friends-live-pulse 2.2s ease-in-out infinite;
+}
+
+@keyframes home-friends-live-pulse {
+    0%,
+    100% {
+        box-shadow: 0 0 0 0 rgb(34 197 94 / 0.35);
+    }
+
+    50% {
+        box-shadow: 0 0 0 5px rgb(34 197 94 / 0);
+    }
+}
+
+.home-friend-activity-card.active {
+    border-color: color-mix(in srgb, rgb(34 197 94) 38%, var(--border));
+    box-shadow:
+        0 14px 28px rgb(0 0 0 / 0.22),
+        0 0 0 1px rgb(34 197 94 / 0.12),
+        0 0 22px rgb(34 197 94 / 0.1);
+}
+
+.home-friend-activity-card.private {
+    cursor: default;
+    border-style: dashed;
+}
+
+.home-friend-activity-card.private:hover {
+    transform: none;
+    box-shadow: 0 8px 24px rgb(0 0 0 / 0.14);
+}
+
+.home-friend-presence {
+    position: absolute;
+    right: -1px;
+    bottom: -1px;
+    width: 12px;
+    height: 12px;
+    border-radius: 999px;
+    border: 2px solid var(--card);
+}
+
+.home-friend-presence.active {
+    background: #22c55e;
+    animation: home-friends-live-pulse 2.2s ease-in-out infinite;
+}
+
+.home-friend-presence.inactive {
+    background: color-mix(in srgb, var(--muted-foreground) 70%, transparent);
+}
+
+.home-friend-activity-card:hover .home-friend-activity-cover img {
+    transform: scale(1.06);
+}
+
+.home-friend-eq {
+    position: absolute;
+    right: 6px;
+    bottom: 6px;
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 14px;
+    padding: 2px 4px;
+    border-radius: 6px;
+    background: rgb(0 0 0 / 0.55);
+    backdrop-filter: blur(4px);
+}
+
+.home-friend-eq i {
+    width: 3px;
+    border-radius: 2px;
+    background: #4ade80;
+    animation: home-friends-eq 0.9s ease-in-out infinite;
+}
+
+.home-friend-eq i:nth-child(1) {
+    height: 60%;
+}
+
+.home-friend-eq i:nth-child(2) {
+    height: 100%;
+    animation-delay: 0.2s;
+}
+
+.home-friend-eq i:nth-child(3) {
+    height: 45%;
+    animation-delay: 0.4s;
+}
+
+@keyframes home-friends-eq {
+    0%,
+    100% {
+        transform: scaleY(0.5);
+    }
+
+    50% {
+        transform: scaleY(1);
+    }
+}
+
+.home-friend-activity-card.skeleton-card {
+    pointer-events: none;
+    cursor: default;
+}
+
+.home-friend-activity-card.skeleton-card::before {
+    display: none;
+}
+
+.home-friend-activity-card .skeleton-lines {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+    flex: 1;
+}
+
+.home-friend-activity-card .skeleton-avatar {
+    width: 42px;
+    height: 42px;
+    border-radius: 999px;
+    flex-shrink: 0;
+}
+
+.home-friend-activity-card .skeleton-cover {
+    width: 76px;
+    height: 76px;
+    border-radius: 0.7rem;
+}
+
+.home-friend-activity-card .skeleton-line {
+    height: 12px;
+    border-radius: 6px;
+}
+
+.home-friend-activity-card .skeleton-line.short {
+    width: 55%;
+}
+
+.skeleton-avatar,
+.skeleton-cover,
+.skeleton-line {
+    background: linear-gradient(
+        100deg,
+        color-mix(in srgb, var(--secondary) 70%, transparent) 40%,
+        color-mix(in srgb, var(--secondary) 30%, transparent) 50%,
+        color-mix(in srgb, var(--secondary) 70%, transparent) 60%
+    );
+    background-size: 200% 100%;
+    animation: home-friends-shimmer 1.4s linear infinite;
+}
+
+@keyframes home-friends-shimmer {
+    0% {
+        background-position: 180% 0;
+    }
+
+    100% {
+        background-position: -20% 0;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .home-friends-live-count,
+    .home-friend-presence.active,
+    .home-friend-eq i,
+    .skeleton-avatar,
+    .skeleton-cover,
+    .skeleton-line {
+        animation: none;
+    }
+
+    .home-friend-activity-card:hover {
+        transform: none;
+    }
+
+    .home-friend-activity-card:hover .home-friend-activity-cover img {
+        transform: none;
+    }
 }
 
 @media (max-width: 900px) {
@@ -18410,6 +18630,7 @@ button:active {
     100% {
         opacity: 1;
     }
+
     50% {
         opacity: 0.45;
     }

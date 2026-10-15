@@ -2936,6 +2936,31 @@ export function initializeSettings(scrobbler, player, api, ui, discord) {
         });
     }
 
+    const showFriendsActivityToggle = document.getElementById('show-friends-activity-toggle');
+    if (showFriendsActivityToggle) {
+        showFriendsActivityToggle.checked = homePageSettings.shouldShowFriendsActivity();
+        showFriendsActivityToggle.addEventListener('change', (e) => {
+            homePageSettings.setShowFriendsActivity(e.target.checked);
+            const section = document.getElementById('home-friends-activity-section');
+            if (!e.target.checked && section) {
+                section.style.display = 'none';
+            } else if (ui && typeof ui.renderHomeFriendsActivity === 'function') {
+                ui.renderHomeFriendsActivity();
+            }
+        });
+    }
+
+    const hideFriendsDetailsToggle = document.getElementById('hide-friends-details-toggle');
+    if (hideFriendsDetailsToggle) {
+        hideFriendsDetailsToggle.checked = homePageSettings.shouldHideFriendsDetails();
+        hideFriendsDetailsToggle.addEventListener('change', (e) => {
+            homePageSettings.setHideFriendsDetails(e.target.checked);
+            if (ui && typeof ui.renderHomeFriendsActivity === 'function') {
+                ui.renderHomeFriendsActivity();
+            }
+        });
+    }
+
     const showEditorsPicksToggle = document.getElementById('show-editors-picks-toggle');
     if (showEditorsPicksToggle) {
         showEditorsPicksToggle.checked = homePageSettings.shouldShowEditorsPicks();

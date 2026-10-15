@@ -1607,6 +1607,8 @@ export const homePageSettings = {
     SHOW_RECOMMENDED_ALBUMS_KEY: 'home-show-recommended-albums',
     SHOW_RECOMMENDED_ARTISTS_KEY: 'home-show-recommended-artists',
     SHOW_JUMP_BACK_IN_KEY: 'home-show-jump-back-in',
+    SHOW_FRIENDS_ACTIVITY_KEY: 'home-show-friends-activity',
+    HIDE_FRIENDS_DETAILS_KEY: 'home-hide-friends-details',
 
     shouldShowRecommendedSongs() {
         try {
@@ -1658,6 +1660,31 @@ export const homePageSettings = {
 
     setShowJumpBackIn(enabled) {
         localStorage.setItem(this.SHOW_JUMP_BACK_IN_KEY, enabled ? 'true' : 'false');
+    },
+
+    shouldShowFriendsActivity() {
+        try {
+            const val = localStorage.getItem(this.SHOW_FRIENDS_ACTIVITY_KEY);
+            return val === null ? true : val === 'true';
+        } catch {
+            return true;
+        }
+    },
+
+    setShowFriendsActivity(enabled) {
+        localStorage.setItem(this.SHOW_FRIENDS_ACTIVITY_KEY, enabled ? 'true' : 'false');
+    },
+
+    shouldHideFriendsDetails() {
+        try {
+            return localStorage.getItem(this.HIDE_FRIENDS_DETAILS_KEY) === 'true';
+        } catch {
+            return false;
+        }
+    },
+
+    setHideFriendsDetails(enabled) {
+        localStorage.setItem(this.HIDE_FRIENDS_DETAILS_KEY, enabled ? 'true' : 'false');
     },
 
     SHOW_EDITORS_PICKS_KEY: 'home-show-editors-picks',
