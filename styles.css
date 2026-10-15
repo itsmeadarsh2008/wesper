@@ -20027,3 +20027,54 @@ button:active {
 #page-home #home-recommended-albums > .card .card-image {
     border-radius: 15px 15px 0 0;
 }
+/* Left-side artwork backdrop: full-height cover art blended into the
+   background. Reuses --bg-image (set on the overlay by JS), so no extra
+   plumbing is needed. Hidden while video/visualizer backgrounds are active. */
+#fs-art-side {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    translate: 0 -50%;
+    width: min(100vh, 96vw);
+    aspect-ratio: 1 / 1;
+    background-image: var(--bg-image);
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    filter: saturate(1.06) brightness(0.92);
+    opacity: 0.85;
+    pointer-events: none;
+    mask-image: linear-gradient(to right, #000 52%, transparent 98%);
+    transition: opacity 0.3s ease;
+}
+
+#fullscreen-cover-overlay.video-bg-active #fs-art-side,
+#fullscreen-cover-overlay.video-visualizer-active #fs-art-side {
+    opacity: 0;
+}
+
+@media (max-width: 768px) {
+    #fs-art-side {
+        top: 0;
+        bottom: auto;
+        left: 0;
+        right: 0;
+        translate: none;
+        width: 100%;
+        height: 44vh;
+        aspect-ratio: auto;
+        background-position: center 30%;
+        opacity: 0.5;
+        mask-image: linear-gradient(to bottom, #000 45%, transparent 98%);
+    }
+}
+
+@media (min-width: 769px) {
+    /* The full square carries the artwork — the small centered square is
+       redundant, so hide it. The vinyl disc keeps its label (part of the
+       disc), so the tilt stays while rotating-disc is active. */
+    #fullscreen-cover-tilt:not(:has(#vinyl-disc-container.rotating-disc)) {
+        display: none;
+    }
+}
+
