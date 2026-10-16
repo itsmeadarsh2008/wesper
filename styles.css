@@ -10767,6 +10767,124 @@ body.auth-locked .auth-email-form .template-input {
     animation: fade-in 0.1s ease-in;
 }
 
+/* -------------------------------------------------------------------------
+   POPUP SYSTEM — unified modal chrome (headers, fields, actions, options).
+   Works with the frosted-glass pass above; no markup changes required.
+   ------------------------------------------------------------------------- */
+.modal-content > h3:first-child,
+.modal-content > .modal-header h3 {
+    margin: 0 0 0.35rem;
+    font-size: 1.2rem;
+    font-weight: 800;
+    letter-spacing: -0.015em;
+    color: var(--foreground);
+}
+
+.modal-content > p:first-of-type,
+.modal-content > .modal-sub {
+    margin: 0 0 1rem;
+    font-size: 0.86rem;
+    line-height: 1.5;
+    color: color-mix(in srgb, var(--muted-foreground) 95%, transparent);
+}
+
+.modal-content input[type='text'],
+.modal-content input[type='search'],
+.modal-content input[type='password'],
+.modal-content input[type='number'],
+.modal-content input[type='url'],
+.modal-content textarea,
+.modal-content select:not(.font-type-select) {
+    width: 100%;
+    padding: 0.6rem 0.75rem;
+    font-size: 0.9rem;
+    font-family: inherit;
+    color: var(--foreground);
+    background: color-mix(in srgb, var(--secondary) 55%, transparent);
+    border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+    border-radius: 0.65rem;
+    outline: none;
+    transition:
+        border-color 0.15s ease,
+        box-shadow 0.15s ease;
+}
+
+.modal-content input:focus,
+.modal-content textarea:focus,
+.modal-content select:focus {
+    border-color: color-mix(in srgb, var(--highlight) 55%, var(--border));
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--highlight) 18%, transparent);
+}
+
+.modal-content label.label,
+.modal-content .label {
+    display: block;
+    margin: 0.9rem 0 0.35rem;
+    font-size: 0.76rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: color-mix(in srgb, var(--muted-foreground) 95%, transparent);
+}
+
+.modal-content .modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.55rem;
+    margin-top: 1.4rem;
+}
+
+.modal-actions .btn-primary,
+.modal-actions .btn-secondary {
+    min-height: 38px;
+    padding: 0.5rem 1.1rem;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    font-weight: 700;
+}
+
+.modal-content .modal-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.modal-content .modal-list .modal-option {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.6rem 0.75rem;
+    border-radius: 0.7rem;
+    border: 1px solid transparent;
+    transition:
+        background 0.15s ease,
+        border-color 0.15s ease,
+        transform 0.15s ease;
+}
+
+.modal-content .modal-list .modal-option:hover {
+    background: color-mix(in srgb, var(--secondary) 60%, transparent);
+    border-color: color-mix(in srgb, var(--border) 70%, transparent);
+    transform: translateX(2px);
+}
+
+@media (max-width: 560px) {
+    .modal-content {
+        padding: 1.4rem 1.2rem;
+        width: calc(100% - 2rem);
+    }
+
+    .modal-actions {
+        flex-direction: column-reverse;
+    }
+
+    .modal-actions .btn-primary,
+    .modal-actions .btn-secondary {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
 /* fuck this chud ass shit bro */
 .csv-import-progress {
     position: fixed;
@@ -15367,6 +15485,152 @@ textarea:focus {
     opacity: 0.5;
 }
 
+/* -------------------------------------------------------------------------
+   LIBRARY REDESIGN — hero dashboard, shell sections, count tabs
+   ------------------------------------------------------------------------- */
+#page-library.page {
+    max-width: 1320px;
+    margin-inline: auto;
+}
+
+.library-hero {
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1.6rem 1.4rem 1.3rem;
+    margin-bottom: 1rem;
+    border-radius: 1.2rem;
+    border: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+    background:
+        radial-gradient(110% 130% at 100% 0%, color-mix(in srgb, var(--primary) 16%, transparent) 0%, transparent 55%),
+        linear-gradient(
+            150deg,
+            color-mix(in srgb, var(--card) 88%, transparent) 0%,
+            color-mix(in srgb, var(--background) 92%, transparent) 100%
+        );
+    box-shadow: 0 12px 32px rgb(0 0 0 / 0.18);
+}
+
+.library-hero-text {
+    min-width: 0;
+}
+
+.library-hero-title {
+    margin: 0.15rem 0 0.3rem;
+    font-size: clamp(2rem, 5vw, 2.9rem);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1.05;
+    color: var(--foreground);
+}
+
+.library-hero-subtitle {
+    margin: 0;
+    font-size: 0.88rem;
+    color: color-mix(in srgb, var(--muted-foreground) 95%, transparent);
+}
+
+#page-library .library-hero .library-actions {
+    display: flex;
+    gap: 0.55rem;
+    flex-shrink: 0;
+    padding: 0;
+}
+
+#page-library .content-section {
+    border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+    border-radius: 1.1rem;
+    padding: 1rem;
+    background: linear-gradient(
+        155deg,
+        color-mix(in srgb, var(--card) 82%, transparent) 0%,
+        color-mix(in srgb, var(--background) 94%, transparent) 100%
+    );
+}
+
+#page-library .library-header {
+    align-items: center;
+    padding: 0 0.25rem;
+}
+
+#page-library .library-tabs {
+    gap: 0.35rem;
+    padding: 0.3rem;
+    margin-bottom: 1rem;
+    overflow-x: auto;
+    max-width: 100%;
+}
+
+#page-library .library-tabs .search-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+}
+
+.tab-count {
+    display: inline-block;
+    min-width: 1.4em;
+    padding: 0.1em 0.45em;
+    font-size: 0.72rem;
+    font-weight: 800;
+    line-height: 1.5;
+    text-align: center;
+    border-radius: 999px;
+    color: color-mix(in srgb, var(--muted-foreground) 95%, transparent);
+    background: color-mix(in srgb, var(--secondary) 70%, transparent);
+    border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+}
+
+.search-tab.active .tab-count {
+    color: var(--primary-foreground, #fff);
+    background: var(--primary);
+    border-color: transparent;
+}
+
+#shuffle-liked-tracks-btn,
+#download-liked-tracks-btn {
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
+    background: color-mix(in srgb, var(--card) 80%, transparent);
+    backdrop-filter: blur(8px);
+    transition:
+        transform 0.15s ease,
+        border-color 0.15s ease;
+}
+
+#shuffle-liked-tracks-btn:hover,
+#download-liked-tracks-btn:hover {
+    transform: translateY(-1px);
+    border-color: color-mix(in srgb, var(--highlight) 45%, var(--border));
+}
+
+#local-files-intro {
+    border: 1px dashed color-mix(in srgb, var(--border) 80%, transparent);
+    border-radius: 0.9rem;
+    padding: 2rem 1rem;
+}
+
+@media (max-width: 640px) {
+    .library-hero {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 1.2rem 1rem 1rem;
+    }
+
+    #page-library .library-hero .library-actions {
+        width: 100%;
+    }
+
+    #page-library .library-hero .library-actions .btn-primary,
+    #page-library .library-hero .library-actions .btn-secondary {
+        flex: 1;
+        justify-content: center;
+    }
+}
+
 @keyframes presence-glow {
     0% {
         box-shadow: 0 0 0 0 rgb(255, 255, 255, 0.8);
@@ -16702,26 +16966,6 @@ input[type='search']::-webkit-search-results-decoration {
     }
 }
 
-/* Friend Card Actions */
-.friend-card .friend-card-actions {
-    flex-shrink: 0;
-    opacity: 0.92;
-    transform: translateX(0);
-    transition:
-        opacity 0.2s var(--ease-out),
-        transform 0.2s var(--ease-spring-soft);
-}
-
-.friend-card:hover .friend-card-actions {
-    opacity: 1;
-    transform: translateX(0);
-}
-
-.friend-card .friend-card-actions .btn-secondary {
-    padding: 0.5rem 1rem;
-    font-size: 0.8125rem;
-}
-
 /* Friend Request Section */
 #friends-requests-section {
     margin-bottom: 2rem;
@@ -16976,11 +17220,6 @@ input[type='search']::-webkit-search-results-decoration {
     .friends-grid {
         grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     }
-
-    .friend-card .friend-card-actions {
-        opacity: 1;
-        transform: none;
-    }
 }
 
 /* Mobile Optimizations */
@@ -17048,19 +17287,8 @@ input[type='search']::-webkit-search-results-decoration {
         padding: 0.875rem;
     }
 
-    .friend-card .friend-card-actions {
-        display: block;
-        width: 100%;
-        margin-top: 0.65rem;
-    }
-
     .friend-card {
         flex-wrap: wrap;
-    }
-
-    .friend-card .friend-card-actions .btn-secondary {
-        width: 100%;
-        justify-content: center;
     }
 
     .friends-discover-panel {
@@ -17087,11 +17315,6 @@ input[type='search']::-webkit-search-results-decoration {
         right: 0.5rem;
         width: 40px;
         height: 40px;
-    }
-
-    .friend-card .friend-card-actions {
-        opacity: 1;
-        transform: none;
     }
 
     .card:hover {
@@ -17568,21 +17791,6 @@ input[type='search']::-webkit-search-results-decoration {
     border-radius: 1rem;
 }
 
-.friend-card-shell {
-    display: flex;
-    align-items: center;
-    gap: 0.9rem;
-    width: 100%;
-    padding: 1rem;
-    background:
-        radial-gradient(120% 120% at 0% 100%, color-mix(in srgb, var(--primary) 10%, transparent) 0%, transparent 50%),
-        color-mix(in srgb, var(--card) 88%, transparent);
-}
-
-.friend-card .friend-status.muted {
-    color: var(--muted-foreground);
-}
-
 .friend-request-item {
     padding: 0;
 }
@@ -17604,15 +17812,8 @@ input[type='search']::-webkit-search-results-decoration {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    .friend-card-shell,
     .friend-request-shell {
         flex-wrap: wrap;
-    }
-
-    .friend-card .friend-card-actions,
-    .friend-request-item .friend-request-actions {
-        width: 100%;
-        justify-content: flex-end;
     }
 }
 
@@ -19759,6 +19960,20 @@ button:active {
     box-shadow: 0 10px 22px rgb(0 0 0 / 0.18);
 }
 
+#page-friends.friends-redesign .friend-card {
+    cursor: pointer;
+}
+
+#page-friends.friends-redesign .collab-playlist-card {
+    margin: 0;
+    border-radius: 0.88rem;
+    border: 1px solid color-mix(in srgb, var(--border) 76%, transparent);
+    background: color-mix(in srgb, var(--card) 84%, transparent);
+    padding: 0.74rem;
+    box-shadow: 0 10px 22px rgb(0 0 0 / 0.18);
+    cursor: pointer;
+}
+
 #page-friends.friends-redesign .friend-card:hover,
 #page-friends.friends-redesign .friend-request-item:hover,
 #page-friends.friends-redesign .friend-suggestion-item:hover,
@@ -19783,12 +19998,6 @@ button:active {
     height: 52px;
     border: 1px solid color-mix(in srgb, var(--border) 82%, transparent);
     box-shadow: 0 6px 16px rgb(0 0 0 / 0.25);
-}
-
-#page-friends.friends-redesign .friend-card-top {
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
 }
 
 #page-friends.friends-redesign .friend-name,
@@ -19892,6 +20101,7 @@ button:active {
 
 #page-friends.friends-redesign .collab-playlist-media {
     position: relative;
+    flex-shrink: 0;
     width: 68px;
     height: 68px;
     border-radius: 0.8rem;
@@ -19915,6 +20125,9 @@ button:active {
     font-size: 0.98rem;
     font-weight: 670;
     margin-bottom: 0.24rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 #page-friends.friends-redesign .collab-playlist-meta-row {
@@ -19932,13 +20145,9 @@ button:active {
     padding: 0.18rem 0.48rem;
 }
 
-#page-friends.friends-redesign .collab-playlist-subtitle {
-    margin-top: 0.28rem;
-    font-size: 0.78rem;
-    color: color-mix(in srgb, var(--muted-foreground) 87%, transparent);
-}
-
 #page-friends.friends-redesign .collab-playlist-chevron {
+    flex-shrink: 0;
+    align-self: center;
     font-size: 0.72rem;
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -19955,6 +20164,165 @@ button:active {
 
 #page-friends.friends-redesign .btn-secondary {
     background: color-mix(in srgb, var(--secondary) 40%, transparent);
+}
+
+/* -------------------------------------------------------------------------
+   FRIENDS v7 — presence life, track hierarchy, shared rows, play reveal
+   ------------------------------------------------------------------------- */
+
+/* Live presence dot: pulsing green for now-playing, static grey otherwise */
+#page-friends.friends-redesign .friend-status-track {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin-top: 0.4rem;
+    font-size: 0.84rem;
+    line-height: 1.35;
+    color: var(--foreground);
+}
+
+#page-friends.friends-redesign .friend-avatar {
+    position: relative;
+    flex-shrink: 0;
+}
+
+#page-friends.friends-redesign .friend-presence-dot {
+    position: absolute;
+    right: -1px;
+    bottom: -1px;
+    width: 12px;
+    height: 12px;
+    border-radius: 999px;
+    border: 2px solid var(--card);
+    background: #22c55e;
+    animation: friend-presence-ping 2s ease-out infinite;
+}
+
+@keyframes friend-presence-ping {
+    0% {
+        box-shadow: 0 0 0 0 rgb(34 197 94 / 0.45);
+    }
+
+    70% {
+        box-shadow: 0 0 0 7px rgb(34 197 94 / 0);
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 rgb(34 197 94 / 0);
+    }
+}
+
+#page-friends.friends-redesign .friend-presence-dot.inactive {
+    background: color-mix(in srgb, var(--muted-foreground) 65%, transparent);
+    animation: none;
+    box-shadow: none;
+}
+
+#page-friends.friends-redesign .friend-status-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+}
+
+/* Last-played rows are history, not live: muted and ultralight dot */
+#page-friends.friends-redesign .friend-status-track.friend-last-track {
+    color: color-mix(in srgb, var(--muted-foreground) 95%, transparent);
+    font-size: 0.8rem;
+}
+
+#page-friends.friends-redesign .friend-last-active {
+    margin-top: 0.25rem;
+    font-size: 0.74rem;
+    letter-spacing: 0.02em;
+    color: color-mix(in srgb, var(--muted-foreground) 85%, transparent);
+}
+
+/* Idle pill gets its own quiet style (was inheriting the base pill) */
+#page-friends.friends-redesign .friend-presence-pill.inactive {
+    color: color-mix(in srgb, var(--muted-foreground) 95%, transparent);
+    background: color-mix(in srgb, var(--secondary) 55%, transparent);
+    border: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
+}
+
+/* Shared tracks: shell rows instead of bare global rows */
+#page-friends.friends-redesign #shared-tracks-list.track-list {
+    gap: 0.45rem;
+}
+
+#page-friends.friends-redesign #shared-tracks-list .track-item {
+    border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+    border-radius: 0.8rem;
+    padding: 0.5rem 0.6rem;
+    background: color-mix(in srgb, var(--card) 78%, transparent);
+    transition:
+        transform 0.15s ease,
+        border-color 0.15s ease;
+}
+
+#page-friends.friends-redesign #shared-tracks-list .track-item:hover {
+    transform: translateY(-1px);
+    border-color: color-mix(in srgb, var(--highlight) 35%, var(--border));
+}
+
+/* Collab play button: reveal on hover, always visible on touch */
+#page-friends.friends-redesign .collab-playlist-card .collab-play-btn {
+    opacity: 0;
+    transform: scale(0.85);
+    transition:
+        opacity 0.18s ease,
+        transform 0.18s ease;
+}
+
+#page-friends.friends-redesign .collab-playlist-card:hover .collab-play-btn,
+#page-friends.friends-redesign .collab-playlist-card:focus-within .collab-play-btn {
+    opacity: 1;
+    transform: scale(1);
+}
+
+@media (hover: none) {
+    #page-friends.friends-redesign .collab-playlist-card .collab-play-btn {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* -------------------------------------------------------------------------
+   FRIENDS v8 — decluttered rows: no per-row buttons (the card itself
+   navigates), pill right-aligned, chevron overflow fixed
+   ------------------------------------------------------------------------- */
+#page-friends.friends-redesign .friend-card:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--highlight) 65%, transparent);
+    outline-offset: 2px;
+}
+
+#page-friends.friends-redesign .friend-card-body {
+    min-width: 0;
+}
+
+#page-friends.friends-redesign .friend-card .friend-presence-pill {
+    justify-self: end;
+    align-self: start;
+    flex-shrink: 0;
+}
+
+#page-friends.friends-redesign .friend-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#page-friends.friends-redesign .collab-playlist-content {
+    min-width: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #page-friends.friends-redesign .friend-presence-dot {
+        animation: none;
+    }
 }
 
 @media (max-width: 1120px) {
@@ -20010,7 +20378,6 @@ button:active {
         gap: 0.66rem;
     }
 
-    #page-friends.friends-redesign.page.active .friend-card-actions,
     #page-friends.friends-redesign.page.active .friend-request-actions,
     #page-friends.friends-redesign.page.active .friend-suggestion-actions {
         grid-column: auto;
@@ -20082,7 +20449,6 @@ button:active {
         row-gap: 0.35rem;
     }
 
-    #page-friends.friends-redesign.page.active .friend-card-actions,
     #page-friends.friends-redesign.page.active .friend-request-actions,
     #page-friends.friends-redesign.page.active .friend-suggestion-actions {
         grid-column: 2 / 3;
@@ -20105,7 +20471,6 @@ button:active {
 .billboard-album-card,
 .collab-playlist-card,
 .friend-card,
-.friend-card-shell,
 .home-friend-activity-card,
 .home-recent-card,
 .jump-back-card,

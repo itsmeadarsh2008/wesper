@@ -2359,13 +2359,20 @@
                 </div>
 
                 <div id="page-library" class="page">
+                    <div class="library-hero">
+                        <div class="library-hero-text">
+                            <p class="section-eyebrow">Collection</p>
+                            <h1 class="library-hero-title">Your Library</h1>
+                            <p class="library-hero-subtitle" id="library-hero-stats">Loading your collection…</p>
+                        </div>
+                        <div class="library-actions">
+                            <button id="create-folder-btn" class="btn-secondary">New Folder</button>
+                            <button id="create-playlist-btn" class="btn-primary">Create Playlist</button>
+                        </div>
+                    </div>
                     <section class="content-section">
                         <div class="library-header">
                             <h2>My Playlists</h2>
-                            <div class="library-actions">
-                                <button id="create-folder-btn" class="btn-secondary">New Folder</button>
-                                <button id="create-playlist-btn" class="btn-primary">Create Playlist</button>
-                            </div>
                         </div>
                         <div class="card-grid" id="my-folders-container"></div>
                         <div class="card-grid" id="my-playlists-container"></div>
@@ -2383,12 +2390,22 @@
 
                     <section class="content-section">
                         <h2 class="section-title" style="margin-left: 0.5rem">Favorites</h2>
-                        <div class="search-tabs">
-                            <button class="search-tab active" data-tab="tracks">Liked Tracks</button>
-                            <button class="search-tab" data-tab="albums">Albums</button>
-                            <button class="search-tab" data-tab="artists">Artists</button>
-                            <button class="search-tab" data-tab="playlists">Playlists and Mixes</button>
-                            <button class="search-tab" data-tab="local">Local Files</button>
+                        <div class="search-tabs library-tabs">
+                            <button class="search-tab active" data-tab="tracks">
+                                Liked Tracks <span class="tab-count" id="library-count-tracks"></span>
+                            </button>
+                            <button class="search-tab" data-tab="albums">
+                                Albums <span class="tab-count" id="library-count-albums"></span>
+                            </button>
+                            <button class="search-tab" data-tab="artists">
+                                Artists <span class="tab-count" id="library-count-artists"></span>
+                            </button>
+                            <button class="search-tab" data-tab="playlists">
+                                Playlists and Mixes <span class="tab-count" id="library-count-playlists"></span>
+                            </button>
+                            <button class="search-tab" data-tab="local">
+                                Local Files <span class="tab-count" id="library-count-local"></span>
+                            </button>
                         </div>
                         <div class="search-tab-content active" id="library-tab-tracks">
                             <div style="display: flex; justify-content: flex-start; gap: 0.5rem; margin-bottom: 0.5rem">

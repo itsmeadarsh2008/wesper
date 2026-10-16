@@ -271,6 +271,22 @@ function initializeKeyboardShortcuts(player, audioPlayer) {
                 document.getElementById('search-input')?.blur();
                 sidePanelManager.close();
                 clearLyricsPanelSync(audioPlayer, sidePanelManager.panel);
+                // Close the topmost modal via its own cancel control when it
+                // has one (preserves per-modal cleanup), else drop .active.
+                {
+                    const openModals = Array.from(document.querySelectorAll('.modal.active'));
+                    const topmost = openModals[openModals.length - 1];
+                    if (topmost) {
+                        const cancelControl = topmost.querySelector(
+                            '[id*="cancel"], .close-modal-btn, .close-shortcuts, .close-missing-tracks, .btn-close'
+                        );
+                        if (cancelControl) {
+                            cancelControl.click();
+                        } else {
+                            topmost.classList.remove('active');
+                        }
+                    }
+                }
                 break;
             case 'l':
                 document.querySelector('.now-playing-bar .cover')?.click();

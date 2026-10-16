@@ -3724,6 +3724,39 @@ export class UIRenderer {
         this.renderLocalFiles(localContainer);
 
         this.renderLibraryCollaborativePlaylists();
+
+        this._updateLibraryHeroStats({
+            tracks: likedTracks.length,
+            albums: likedAlbums.length,
+            artists: likedArtists.length,
+            playlists: mixedContent.length + visiblePlaylists.length + folders.length,
+            local: Array.isArray(window.localFilesCache) ? window.localFilesCache.length : 0,
+        });
+    }
+
+    _updateLibraryHeroStats({ tracks = 0, albums = 0, artists = 0, playlists = 0, local = 0 } = {}) {
+        const stats = document.getElementById('library-hero-stats');
+        if (stats) {
+            const parts = [];
+            if (tracks) parts.push(`${tracks} track${tracks === 1 ? '' : 's'}`);
+            if (albums) parts.push(`${albums} album${albums === 1 ? '' : 's'}`);
+            if (artists) parts.push(`${artists} artist${artists === 1 ? '' : 's'}`);
+            if (playlists) parts.push(`${playlists} playlist${playlists === 1 ? '' : 's'}`);
+            stats.textContent = parts.length ? parts.join(' · ') : 'Your collection lives here.';
+        }
+        const counts = {
+            'library-count-tracks': tracks,
+            'library-count-albums': albums,
+            'library-count-artists': artists,
+            'library-count-playlists': playlists,
+            'library-count-local': local,
+        };
+        for (const [id, count] of Object.entries(counts)) {
+            const el = document.getElementById(id);
+            if (!el) continue;
+            el.textContent = count > 0 ? String(count) : '';
+            el.style.display = count > 0 ? '' : 'none';
+        }
     }
 
     async renderLocalFiles(container) {
@@ -8654,26 +8687,22 @@ export class UIRenderer {
                         );
                         const lastActiveText = escapeHtml(formatLastActive(lastActiveAtMs));
                         return `
-                            <div class="friend-card" data-uid="${friend.uid}" data-username="${safeUsername}">
+                            <div class="friend-card" data-uid="${friend.uid}" data-username="${safeUsername}" tabindex="0" role="link" aria-label="View profile of ${safeDisplayName}">>
                                 <div class="friend-row-shell">
                                     <div class="friend-avatar friend-avatar-lg">
                                         <img src="${friend.avatarUrl || '/assets/appicon.png'}" alt="${safeDisplayName}" loading="lazy" onerror="this.onerror=null;this.src='/assets/appicon.png';">
+                                        <span class="friend-presence-dot ${hasFreshNowPlaying ? 'active' : 'inactive'}"></span>
                                     </div>
                                     <div class="friend-card-body">
-                                        <div class="friend-card-top">
-                                            <div class="friend-name">${safeDisplayName}</div>
-                                            <span class="friend-presence-pill ${hasFreshNowPlaying ? 'active' : 'inactive'}">${hasFreshNowPlaying ? 'Listening' : 'Idle'}</span>
-                                        </div>
+                                        <div class="friend-name">${safeDisplayName}</div>
                                         <div class="friend-username">@${safeUsername}</div>
                                         ${
                                             hasFreshNowPlaying
-                                                ? `<div class="friend-status-track"><span class="friend-status-dot"></span><span class="friend-status-text">${safeStatus}</span></div>`
+                                                ? `<div class="friend-status-track"><span class="friend-status-text">${safeStatus}</span></div>`
                                                 : `${hasLastTrack ? `<div class="friend-status-track friend-last-track">Last played: ${safeStatus}</div>` : ''}<div class="friend-last-active">${lastActiveText}</div>`
                                         }
                                     </div>
-                                    <div class="friend-card-actions">
-                                        <button class="btn-secondary friend-open-profile-btn" data-username="${safeUsername}">Profile</button>
-                                    </div>
+                                    <span class="friend-presence-pill ${hasFreshNowPlaying ? 'active' : 'inactive'}">${hasFreshNowPlaying ? 'Listening' : 'Idle'}</span>
                                 </div>
                             </div>
                         `;
@@ -8795,7 +8824,6 @@ export class UIRenderer {
                                         <span class="collab-playlist-chip">${memberCount} members</span>
                                         <span class="collab-playlist-chip">${escapeHtml(durationLabel)}</span>
                                     </div>
-                                    <div class="collab-playlist-subtitle">Built for shared listening sessions</div>
                                 </div>
                                 <div class="collab-playlist-chevron" aria-hidden="true">Open</div>
                             </article>
@@ -8940,18 +8968,16 @@ export class UIRenderer {
             };
         });
 
-        friendsPage.querySelectorAll('.friend-open-profile-btn').forEach((btn) => {
-            btn.onclick = (event) => {
-                event.stopPropagation();
-                const username = btn.dataset.username;
+        friendsPage.querySelectorAll('.friend-card').forEach((card) => {
+            card.onclick = () => {
+                const username = card.dataset.username;
                 if (username) {
                     navigate(`/user/@${encodeURIComponent(username)}`);
                 }
             };
-        });
-
-        friendsPage.querySelectorAll('.friend-card').forEach((card) => {
-            card.onclick = () => {
+            card.onkeydown = (event) => {
+                if (event.key !== 'Enter' && event.key !== ' ') return;
+                event.preventDefault();
                 const username = card.dataset.username;
                 if (username) {
                     navigate(`/user/@${encodeURIComponent(username)}`);
