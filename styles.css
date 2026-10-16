@@ -12300,36 +12300,22 @@ body:has(#fullscreen-cover-overlay:not([style*='display: none'])).side-panel-ope
     left: 2% !important;
 }
 
-/* Final slider redesign: reference-matched dynamic curve + straight remainder */
+/* Final slider design: Apple-style thin rail + round knob.
+   Flat rail with soft end caps; the played fill and knob carry the accent. */
 #progress-bar,
 #fs-progress-bar,
 .now-playing-bar #progress-bar,
 .fullscreen-progress-container #fs-progress-bar {
-    --played-wave-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 72 16' preserveAspectRatio='none'%3E%3Cpath d='M0 8 C 6 2 12 2 18 8 S 30 14 36 8 S 48 2 54 8 S 66 14 72 8' fill='none' stroke='white' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-
     position: relative;
-    height: 14px !important;
+    height: 5px !important;
     border-radius: 999px !important;
-    overflow: hidden !important;
+    overflow: visible !important;
     background: transparent !important;
+    background-color: var(--rail-color, rgb(255 255 255 / 0.5)) !important;
     mask-image: none !important;
     box-shadow: none !important;
 
     --rail-color: rgb(255 255 255 / 0.5);
-
-    background-image:
-        radial-gradient(circle 2px at 2px 50%, var(--rail-color) 98%, transparent 100%),
-        radial-gradient(circle 2px at calc(100% - 2px) 50%, var(--rail-color) 98%, transparent 100%),
-        linear-gradient(var(--rail-color), var(--rail-color)) !important;
-    background-size:
-        4px 4px,
-        4px 4px,
-        calc(100% - 8px) 4px !important;
-    background-repeat: no-repeat !important;
-    background-position:
-        left center,
-        right center,
-        center center !important;
 }
 
 #progress-bar,
@@ -12342,7 +12328,7 @@ body:has(#fullscreen-cover-overlay:not([style*='display: none'])).side-panel-ope
     --rail-color: rgb(255 255 255 / 0.58);
 }
 
-/* Played segment width is dynamic; only this region is curved */
+/* Played segment: flat Apple fill; the wave layer below is disabled */
 #progress-fill,
 #fs-progress-fill,
 #progress-bar .progress-fill,
@@ -12350,7 +12336,7 @@ body:has(#fullscreen-cover-overlay:not([style*='display: none'])).side-panel-ope
     position: relative;
     height: 100% !important;
     border-radius: inherit !important;
-    background: transparent !important;
+    background: var(--highlight) !important;
     mask-image: none !important;
     transition:
         width 0.2s linear,
@@ -12358,74 +12344,95 @@ body:has(#fullscreen-cover-overlay:not([style*='display: none'])).side-panel-ope
     z-index: 2;
 }
 
-/* Curved played layer only (dynamic up to pointer) */
+#fs-progress-fill,
+#fs-progress-bar .progress-fill {
+    background: #fff !important;
+}
+
+/* Wave layer disabled in favor of the flat fill above */
 #progress-fill::before,
 #fs-progress-fill::before,
 #progress-bar .progress-fill::before,
 #fs-progress-bar .progress-fill::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    mask-image: var(--played-wave-mask) !important;
-    mask-repeat: repeat-x !important;
-    mask-size: 64px 16px !important;
-    mask-position: 0 50% !important;
-    pointer-events: none;
+    display: none !important;
 }
 
-#progress-fill::before,
-#progress-bar .progress-fill::before {
-    background: linear-gradient(90deg, color-mix(in srgb, var(--highlight) 86%, #fff), var(--highlight)) !important;
-    animation: wave-drift-left 0.9s linear infinite;
-}
-
-#fs-progress-fill::before,
-#fs-progress-bar .progress-fill::before {
-    background: linear-gradient(90deg, rgb(255 255 255 / 0.96), #fff) !important;
-    animation: wave-drift-left 0.75s linear infinite;
-}
-
-@keyframes wave-drift-left {
-    0% {
-        mask-position: 0 50%;
-    }
-
-    100% {
-        mask-position: -64px 50%;
-    }
-}
-
-/* Rectangular pointer block at the boundary */
+/* Round Apple knob on the fill edge; grows on hover/drag */
 #progress-fill::after,
 #fs-progress-fill::after,
 #progress-bar .progress-fill::after,
 #fs-progress-bar .progress-fill::after {
     content: '' !important;
     position: absolute;
-    right: -2px;
+    right: -6px;
     top: 50%;
-    width: 7px;
-    height: 18px;
-    border-radius: 3px;
-    transform: translateY(-50%);
+    width: 12px;
+    height: 12px;
+    border-radius: 999px;
+    transform: translateY(-50%) scale(1);
     pointer-events: none;
     z-index: 4;
+    transition: transform 0.15s ease;
 }
 
 #progress-fill::after,
 #progress-bar .progress-fill::after {
-    background: linear-gradient(180deg, color-mix(in srgb, var(--highlight) 92%, #fff), var(--highlight));
+    background: var(--highlight);
     box-shadow:
         0 0 0 1px color-mix(in srgb, var(--background) 42%, transparent),
-        0 2px 9px color-mix(in srgb, var(--highlight) 44%, transparent);
+        0 2px 8px rgb(0 0 0 / 0.4);
 }
 
 #fs-progress-fill::after,
 #fs-progress-bar .progress-fill::after {
-    background: linear-gradient(180deg, rgb(255 255 255 / 0.98), #fff);
+    background: #fff;
     box-shadow:
-        0 0 0 1px rgb(0 0 0 / 0.28),
-        0 2px 9px rgb(255 255 255 / 0.34);
+        0 0 0 3px rgb(0 0 0 / 0.16),
+        0 1px 6px rgb(0 0 0 / 0.4);
+}
+
+#progress-bar:hover #progress-fill::after,
+#progress-bar:active #progress-fill::after,
+#progress-bar:hover .progress-fill::after,
+#progress-bar:active .progress-fill::after,
+#fs-progress-bar:hover #fs-progress-fill::after,
+#fs-progress-bar:active #fs-progress-fill::after,
+#fs-progress-bar:hover .progress-fill::after,
+#fs-progress-bar:active .progress-fill::after {
+    transform: translateY(-50%) scale(1.3);
+}
+
+/* Container-scoped knob normalization: beats the legacy squiggle knob
+   rules above (same specificity, later source) for both players */
+.now-playing-bar #progress-bar .progress-fill::after,
+.fullscreen-progress-container #fs-progress-bar .progress-fill::after {
+    width: 12px;
+    height: 12px;
+    border-radius: 999px;
+    right: -6px;
+    mask-image: none;
+}
+
+.now-playing-bar #progress-bar .progress-fill::after {
+    background: var(--highlight);
+    box-shadow:
+        0 0 0 1px color-mix(in srgb, var(--background) 42%, transparent),
+        0 2px 8px rgb(0 0 0 / 0.4);
+}
+
+.fullscreen-progress-container #fs-progress-bar .progress-fill::after {
+    background: #fff;
+    box-shadow:
+        0 0 0 3px rgb(0 0 0 / 0.16),
+        0 1px 6px rgb(0 0 0 / 0.4);
+}
+
+.now-playing-bar #progress-bar:hover .progress-fill::after,
+.now-playing-bar #progress-bar:active .progress-fill::after,
+.fullscreen-progress-container #fs-progress-bar:hover .progress-fill::after,
+.fullscreen-progress-container #fs-progress-bar:active .progress-fill::after {
+    height: 12px;
+    transform: translateY(-50%) scale(1.3);
 }
 
 /* Remove legacy after pseudo from bars */
@@ -12436,40 +12443,12 @@ body:has(#fullscreen-cover-overlay:not([style*='display: none'])).side-panel-ope
     content: none !important;
 }
 
-/* End-cap dots to visually smooth curve/rail coinciding points */
+/* End-cap dots removed with the wave rail; the flat rail needs no caps */
 .player-controls .progress-container #progress-bar::before,
 .player-controls .progress-container #progress-bar::after,
 .fullscreen-progress-container #fs-progress-bar::before,
 .fullscreen-progress-container #fs-progress-bar::after {
-    content: '' !important;
-    position: absolute;
-    top: 50%;
-    width: 13px;
-    height: 13px;
-    border-radius: 999px;
-    transform: translateY(-50%);
-    pointer-events: none;
-    z-index: 5;
-}
-
-.player-controls .progress-container #progress-bar::before,
-.fullscreen-progress-container #fs-progress-bar::before {
-    left: 2px;
-}
-
-.player-controls .progress-container #progress-bar::after,
-.fullscreen-progress-container #fs-progress-bar::after {
-    right: 2px;
-}
-
-.player-controls .progress-container #progress-bar::before,
-.player-controls .progress-container #progress-bar::after {
-    background: color-mix(in srgb, var(--highlight) 82%, white 18%);
-}
-
-.fullscreen-progress-container #fs-progress-bar::before,
-.fullscreen-progress-container #fs-progress-bar::after {
-    background: #fff;
+    display: none !important;
 }
 
 @media (max-width: 768px) {
@@ -12477,23 +12456,16 @@ body:has(#fullscreen-cover-overlay:not([style*='display: none'])).side-panel-ope
     #fs-progress-bar,
     .now-playing-bar #progress-bar,
     .fullscreen-progress-container #fs-progress-bar {
-        height: 12px !important;
+        height: 5px !important;
     }
 
     #progress-fill::after,
     #fs-progress-fill::after,
     #progress-bar .progress-fill::after,
     #fs-progress-bar .progress-fill::after {
-        width: 6px;
-        height: 16px;
-    }
-
-    .player-controls .progress-container #progress-bar::before,
-    .player-controls .progress-container #progress-bar::after,
-    .fullscreen-progress-container #fs-progress-bar::before,
-    .fullscreen-progress-container #fs-progress-bar::after {
-        width: 11px;
-        height: 11px;
+        width: 14px;
+        height: 14px;
+        right: -7px;
     }
 }
 
@@ -12516,6 +12488,16 @@ body:has(#fullscreen-cover-overlay:not([style*='display: none'])).side-panel-ope
         animation: none !important;
         mask-position: 0 50% !important;
     }
+}
+
+/* No knob: clean Apple rail + fill only */
+#progress-fill::after,
+#fs-progress-fill::after,
+#progress-bar .progress-fill::after,
+#fs-progress-bar .progress-fill::after,
+.now-playing-bar #progress-bar .progress-fill::after,
+.fullscreen-progress-container #fs-progress-bar .progress-fill::after {
+    display: none;
 }
 
 @media (max-width: 768px) {
