@@ -1041,6 +1041,14 @@ export function initializeSettings(scrobbler, player, api, ui, discord) {
                     detail: { setting: 'prefer-video-cover', enabled: e.target.checked },
                 })
             );
+            // Apply to the open fullscreen immediately (needs no reload).
+            if (ui && typeof ui.clearFullscreenMotionCover === 'function') {
+                if (e.target.checked && player?.currentTrack) {
+                    ui.updateFullscreenMotionCover(player.currentTrack);
+                } else {
+                    ui.clearFullscreenMotionCover();
+                }
+            }
         });
     }
 

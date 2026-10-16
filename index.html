@@ -249,6 +249,15 @@
                                 src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
                                 alt="Album Cover"
                             />
+                            <video
+                                id="fullscreen-cover-video"
+                                muted
+                                loop
+                                playsinline
+                                preload="metadata"
+                                disablepictureinpicture
+                                style="display: none"
+                            ></video>
                         </div>
                         <div id="fullscreen-cover-shine"></div>
                     </div>
@@ -5027,7 +5036,10 @@
                                 <div class="setting-item">
                                     <div class="info">
                                         <span class="label">Prefer Video Cover</span>
-                                        <span class="description">Use videoCover artwork where available</span>
+                                        <span class="description"
+                                            >Use motion artwork as fullscreen art where available (Apple Music motion,
+                                            else probed from the cover)</span
+                                        >
                                     </div>
                                     <label class="toggle-switch">
                                         <input type="checkbox" id="prefer-video-cover-toggle" />

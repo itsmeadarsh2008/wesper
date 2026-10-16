@@ -57,6 +57,7 @@ import {
 import { scrollToTop } from './smooth-scrolling.js';
 import { fetchAllLastFmUserRecentTracks, fetchLastFmUserRecentTracks } from './lastfm.js';
 import { renderArtistSignature } from './artist-signature.js';
+import { getAppleMotionArt } from './apple-motion.js';
 
 const deriveArtistsFromTracks = (tracks) => {
     const artistMap = new Map();
@@ -1479,6 +1480,265 @@ export class UIRenderer {
         } else {
             nextTrackEl.style.display = 'none';
         }
+
+        this.updateFullscreenMotionCover(track);
+    }
+
+    // Motion cover candidates (best size first) for the fullscreen artwork.
+    // Explicit videoCover ids are trusted outright; otherwise (the addon
+    // layer never supplies videoCover) derive candidates from the still
+    // cover id. Existence is proven by the video element itself loading,
+    // never by a HEAD probe (TIDAL 403s probes indiscriminately, so a probe
+    // cannot distinguish missing from gated). Empty means still art.
+    // Winners and total misses are cached per cover for the session.
+    _motionResultCache = new Map();
+
+    getFullscreenMotionCandidates(track) {
+        const videoCoverId = track?.album?.videoCover || track?.videoCover;
+        if (!videoCoverId || typeof this.api?.getVideoCoverUrl !== 'function') return [];
+        if (!hifiVisualSettings.prefersVideoCover()) return [];
+        const sizes = ['1080x1080', '720x720', '1280x720'];
+        const urls = sizes
+            .map((size) => {
+                try {
+                    return this.api.getVideoCoverUrl(videoCoverId, size);
+                } catch {
+                    return null;
+                }
+            })
+            .filter(Boolean);
+        return Array.from(new Set(urls));
+    }
+
+    _coverIdForMotion(track) {
+        const cover = track?.album?.cover ?? track?.cover;
+        if (!cover || typeof cover !== 'string') return null;
+        // Only TIDAL-style image ids are derivable (uuid-ish with - or /).
+        const id = cover.trim();
+        if (!/^[0-9a-f\-/]{8,}$/i.test(id) && !id.includes('resources.tidal.com/images/')) return null;
+        return id;
+    }
+
+    _derivedMotionCandidates(track) {
+        if (!hifiVisualSettings.prefersVideoCover()) return [];
+        if (typeof this.api?.getVideoCoverUrl !== 'function') return [];
+        const coverId = this._coverIdForMotion(track);
+        if (!coverId) return [];
+        if (this._motionResultCache.has(coverId)) {
+            return this._motionResultCache.get(coverId) || [];
+        }
+        const sizes = ['1080x1080', '720x720'];
+        const urls = [];
+        for (const size of sizes) {
+            try {
+                const url = this.api.getVideoCoverUrl(coverId, size);
+                if (url) urls.push(url);
+            } catch {
+                /* skip broken size */
+            }
+        }
+        return urls;
+    }
+
+    _rememberMotionResult(track, urlOrNull) {
+        const coverId = this._coverIdForMotion(track);
+        if (!coverId) return;
+        this._motionResultCache.set(coverId, urlOrNull ? [urlOrNull] : null);
+        if (this._motionResultCache.size > 120) {
+            this._motionResultCache.delete(this._motionResultCache.keys().next().value);
+        }
+    }
+
+    // Shows the motion cover over the still artwork (which keeps laying out
+    // the box), falling through sizes on error and back to still art when
+    // nothing plays. Idempotent per track; never shown in vinyl-disc mode.
+    // Apple Music motion (when found) wins over derived mp4s; the mp4
+    // cascade is the fallback for both lookup failure and playback failure.
+    updateFullscreenMotionCover(track) {
+        const video = document.getElementById('fullscreen-cover-video');
+        if (!video) return;
+        const vinylContainer = document.getElementById('vinyl-disc-container');
+        const isDisc = vinylContainer?.classList.contains('rotating-disc');
+        const trackKey = track ? String(track.id || `${track.title}::${getTrackArtists(track)}`) : '';
+
+        if (!trackKey || isDisc) {
+            if (isDisc) console.log('[MotionCover] vinyl-disc mode, still art only');
+            this.clearFullscreenMotionCover();
+            return;
+        }
+
+        // Gated here (not just at resolve time) so enabling the setting
+        // takes effect immediately instead of serving stale cached misses.
+        if (!hifiVisualSettings.prefersVideoCover()) {
+            console.log('[MotionCover] Prefer Video Cover is off, still art only');
+            this.clearFullscreenMotionCover();
+            return;
+        }
+
+        if (video.dataset.trackKey === trackKey && video.currentSrc) {
+            video.play().catch(() => {});
+            return;
+        }
+
+        const mp4Fallback = [...this.getFullscreenMotionCandidates(track), ...this._derivedMotionCandidates(track)];
+        video.dataset.trackKey = trackKey;
+        getAppleMotionArt(track).then((art) => {
+            if (!video.isConnected || video.dataset.trackKey !== trackKey) return;
+            if (art?.url) {
+                console.log('[MotionCover] playing Apple motion:', art.url.slice(0, 90));
+                this._playMotionHlsCandidate(video, art, trackKey, mp4Fallback, track);
+                return;
+            }
+            console.log('[MotionCover] no Apple motion, trying mp4 cascade:', mp4Fallback.length, 'candidate(s)');
+            if (!mp4Fallback.length) {
+                this.clearFullscreenMotionCover();
+                return;
+            }
+            this._playMotionCandidate(video, mp4Fallback, 0, trackKey, track);
+        });
+    }
+
+    _destroyMotionHls(video) {
+        const hls = video?._motionHls;
+        if (hls) {
+            try {
+                hls.destroy();
+            } catch {
+                /* ignore teardown errors */
+            }
+            delete video._motionHls;
+        }
+    }
+
+    // Plays Apple motion HLS: native where supported (Safari), hls.js
+    // everywhere else. Any fatal failure drops to the mp4 cascade.
+    async _playMotionHlsCandidate(video, art, trackKey, mp4Fallback, track) {
+        if (!video.isConnected || video.dataset.trackKey !== trackKey) return;
+        this._destroyMotionHls(video);
+
+        const fallBackToMp4 = () => {
+            if (!video.isConnected || video.dataset.trackKey !== trackKey) return;
+            this._destroyMotionHls(video);
+            if (!mp4Fallback.length) {
+                this.clearFullscreenMotionCover();
+                return;
+            }
+            this._playMotionCandidate(video, mp4Fallback, 0, trackKey, track);
+        };
+
+        if (art.poster) {
+            video.poster = art.poster;
+        } else {
+            video.removeAttribute('poster');
+        }
+
+        if (video.canPlayType('application/vnd.apple.mpegurl')) {
+            video.addEventListener(
+                'error',
+                () => {
+                    if (video.dataset.trackKey === trackKey) fallBackToMp4();
+                },
+                { once: true }
+            );
+            video.src = art.url;
+            video.load();
+            video.style.display = '';
+            video.play().catch(() => {});
+            // Native HLS support claims are unreliable (some Chromes report
+            // "maybe" yet never load); fall back if nothing arrives.
+            setTimeout(() => {
+                if (!video.isConnected || video.dataset.trackKey !== trackKey) return;
+                if (video.readyState === 0) fallBackToMp4();
+            }, 12000);
+            return;
+        }
+
+        let Hls;
+        try {
+            const module = await import('hls.js');
+            Hls = module.default || module;
+        } catch {
+            Hls = null;
+        }
+        if (!video.isConnected || video.dataset.trackKey !== trackKey) return;
+        if (!Hls || !Hls.isSupported()) {
+            fallBackToMp4();
+            return;
+        }
+
+        let settled = false;
+        const settle = (ok) => {
+            if (settled) return;
+            settled = true;
+            if (!video.isConnected || video.dataset.trackKey !== trackKey) return;
+            if (ok) {
+                video.style.display = '';
+                video.play().catch(() => {});
+            } else {
+                fallBackToMp4();
+            }
+        };
+
+        try {
+            const hls = new Hls({ enableWorker: true, lowLatencyMode: false, backBufferLength: 30 });
+            video._motionHls = hls;
+            hls.on(Hls.Events.MANIFEST_PARSED, () => settle(true));
+            hls.on(Hls.Events.ERROR, (_, data) => {
+                if (data?.fatal) settle(false);
+            });
+            hls.loadSource(art.url);
+            hls.attachMedia(video);
+            setTimeout(() => settle(false), 20000);
+        } catch {
+            settle(false);
+        }
+    }
+
+    _playMotionCandidate(video, candidates, index, trackKey, track) {
+        if (!video.isConnected) return;
+        if (video.dataset.trackKey !== trackKey) return;
+        this._destroyMotionHls(video);
+        video.removeAttribute('poster');
+        if (index > 0) {
+            console.log('[MotionCover] mp4 candidate failed, trying next:', index + 1, 'of', candidates.length);
+        }
+        if (index >= candidates.length) {
+            this._rememberMotionResult(track, null);
+            this.clearFullscreenMotionCover();
+            return;
+        }
+        const onError = () => {
+            if (video.dataset.trackKey !== trackKey) return;
+            this._playMotionCandidate(video, candidates, index + 1, trackKey, track);
+        };
+        const onLoaded = () => {
+            if (video.dataset.trackKey !== trackKey) return;
+            this._rememberMotionResult(track, candidates[index]);
+        };
+        video.addEventListener('error', onError, { once: true });
+        video.addEventListener('loadeddata', onLoaded, { once: true });
+        video.src = candidates[index];
+        video.load();
+        video.style.display = '';
+        video.play().catch(() => {
+            // Autoplay blocked or no data yet; the error/canplay handlers settle it.
+        });
+    }
+
+    clearFullscreenMotionCover() {
+        const video = document.getElementById('fullscreen-cover-video');
+        if (!video) return;
+        this._destroyMotionHls(video);
+        try {
+            video.pause();
+        } catch {
+            /* ignore if already detached */
+        }
+        video.removeAttribute('src');
+        video.removeAttribute('poster');
+        video.load();
+        video.style.display = 'none';
+        delete video.dataset.trackKey;
     }
 
     async showFullscreenCover(track, nextTrack, lyricsManager, audioPlayer) {
@@ -1509,6 +1769,9 @@ export class UIRenderer {
                 vinylContainer.classList.remove('rotating-disc', 'paused');
             }
         }
+
+        // Motion cover after the disc state is final (never in disc mode).
+        this.updateFullscreenMotionCover(track);
 
         this._fullscreenAudioPlayer = audioPlayer;
         this.startFullscreenDiscRotationSync(audioPlayer);
@@ -1606,6 +1869,8 @@ export class UIRenderer {
     closeFullscreenCover() {
         const overlay = document.getElementById('fullscreen-cover-overlay');
         overlay.style.display = 'none';
+
+        this.clearFullscreenMotionCover();
 
         if (this.fullscreenDiscScrubCleanup) {
             this.fullscreenDiscScrubCleanup();

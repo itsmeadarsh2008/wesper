@@ -6475,6 +6475,24 @@ input:checked + .slider::before {
         outline-offset 0.3s ease;
 }
 
+/* Fullscreen motion cover: overlays the still artwork (which keeps laying
+   out the box for tilt/shine/sizing) when the track provides videoCover.
+   Never shown in vinyl-disc mode — the disc keeps its static label. */
+#fullscreen-cover-video {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: var(--radius);
+    z-index: 2;
+    background: #000;
+}
+
+#vinyl-disc-container.rotating-disc #fullscreen-cover-video {
+    display: none !important;
+}
+
 /* Vinyl disc container - default state (no disc) */
 #vinyl-disc-container {
     container-type: inline-size;

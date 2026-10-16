@@ -72,6 +72,7 @@ const NEEDS_PROXY_HOSTS = new Set([
     'lyricsplus-seven.vercel.app',
     'lyrics-plus-backend.vercel.app',
     'storage.lyrics-api.binimum.org',
+    'music.apple.com',
     'sheets.artistgrid.cx',
     'trends.artistgrid.cx',
     'tracker.israeli.ovh',
