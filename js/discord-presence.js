@@ -8,10 +8,10 @@ const POLL_INTERVAL_MS = 15000;
 
 const QUALITY_LABELS = {
     DOLBY_ATMOS: 'Dolby Atmos',
-    HI_RES_LOSSLESS: 'Hi-Res Lossless',
-    LOSSLESS: 'Lossless',
-    HIGH: 'High',
-    LOW: 'Low',
+    HI_RES_LOSSLESS: 'HI-RES LOSSLESS',
+    LOSSLESS: 'LOSSLESS',
+    HIGH: 'HIGH',
+    LOW: 'LOW',
 };
 
 function formatSampleRate(sampleRate) {
@@ -42,20 +42,20 @@ export function buildQualitySummary(track) {
     if (qualityToken === 'DOLBY_ATMOS') {
         qualityLabel = 'Dolby Atmos';
     } else if (lossy) {
-        qualityLabel = 'High';
+        qualityLabel = 'HIGH';
     } else if (QUALITY_LABELS[qualityToken]) {
         qualityLabel = QUALITY_LABELS[qualityToken];
     } else if (bitDepth || sampleRate) {
         const rate = toPositiveInt(track.sampleRate || track.album?.sampleRate);
         if (bitDepth >= 24 && rate > 48000) {
-            qualityLabel = 'Hi-Res Lossless';
+            qualityLabel = 'HI-RES LOSSLESS';
         } else if (bitDepth || rate) {
-            qualityLabel = 'Lossless';
+            qualityLabel = 'LOSSLESS';
         } else {
-            qualityLabel = 'Lossless';
+            qualityLabel = 'LOSSLESS';
         }
     } else {
-        qualityLabel = 'Lossless';
+        qualityLabel = 'LOSSLESS';
     }
 
     const parts = [qualityLabel];

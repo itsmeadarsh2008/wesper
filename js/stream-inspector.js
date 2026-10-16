@@ -6,6 +6,8 @@
 //   - HLS:     the manifest (#EXT-X-STREAM-INF BANDWIDTH, or first segment's
 //              byte size ÷ its #EXTINF duration) + the init segment's audio
 //              sample entry (moov → stsd → fLaC/mp4a/Opus fields).
+//   - DASH:    the MPD's best audio Representation (@bandwidth,
+//              @audioSamplingRate) + its Initialization segment when exposed.
 //   - direct:  a Range probe for the file size ÷ track duration, plus a moov
 //              parse if the head of the file is an mp4 container.
 //
@@ -195,6 +197,27 @@ export function extractFlacSpec(bytes) {
     return decodeFlacStreamInfo(extractFlacStreamInfo(bytes));
 }
 
+// Total PCM samples from a 34-byte FLAC STREAMINFO body (bits 108-143).
+// Arithmetic, not bitwise ops: the 36-bit field exceeds 32-bit range.
+// Combined with the decoded sample rate this is the exact audio duration,
+// so size ÷ duration is the true average bitrate — no estimation.
+export function decodeFlacTotalSamples(streamInfo) {
+    if (!streamInfo || streamInfo.length < 34) return null;
+    const b = streamInfo;
+    const total = (b[13] & 0x0f) * 0x100000000 + b[14] * 0x1000000 + b[15] * 0x10000 + b[16] * 0x100 + b[17];
+    return Number.isSafeInteger(total) && total > 0 ? total : null;
+}
+
+// True when the buffer starts with a raw .flac file whose first metadata
+// block is STREAMINFO with a 34-byte body (magic + header + body = 42 bytes).
+export function isRawFlacHead(bytes) {
+    if (!bytes || bytes.length < 42) return false;
+    if (typeString(bytes, 0) !== 'fLaC') return false;
+    if ((readU8(bytes, 4) & 0x7f) !== 0) return false;
+    const length = (readU8(bytes, 5) << 16) | (readU8(bytes, 6) << 8) | readU8(bytes, 7);
+    return length === 34;
+}
+
 function resolveUri(uri, baseUrl) {
     try {
         return new URL(uri, baseUrl).toString();
@@ -308,17 +331,26 @@ async function inspectHls(manifestUrl) {
     if (playlist.bandwidth) {
         meta.bitrateKbps = Math.round(playlist.bandwidth / 1000);
     } else if (playlist.segments.length > 0) {
-        const first = playlist.segments[0];
-        if (first.uri && first.duration) {
-            try {
-                const segRes = await proxiedFetch(first.uri);
-                if (segRes.ok) {
+        // No declared bandwidth: average over the first few segments instead
+        // of sampling just one, so VBR swings don't skew the figure.
+        const sample = playlist.segments.filter((seg) => seg.uri && seg.duration).slice(0, 3);
+        const sizes = await Promise.all(
+            sample.map(async (seg) => {
+                try {
+                    const segRes = await proxiedFetch(seg.uri);
+                    if (!segRes.ok) return null;
                     const size = (await segRes.arrayBuffer()).byteLength;
-                    if (size > 0) meta.bitrateKbps = Math.round((size * 8) / first.duration / 1000);
+                    return size > 0 ? { size, duration: seg.duration } : null;
+                } catch {
+                    return null;
                 }
-            } catch {
-                /* best-effort */
-            }
+            })
+        );
+        const valid = sizes.filter(Boolean);
+        if (valid.length > 0) {
+            const bytes = valid.reduce((sum, seg) => sum + seg.size, 0);
+            const secs = valid.reduce((sum, seg) => sum + seg.duration, 0);
+            if (secs > 0) meta.bitrateKbps = Math.round((bytes * 8) / secs / 1000);
         }
     }
 
@@ -341,25 +373,192 @@ async function inspectHls(manifestUrl) {
     return pickPlausible(meta);
 }
 
-// Direct-file path: probe the total byte size via Content-Range and derive the
-// bitrate from the track duration; read the sample spec from the file head when
-// it's an mp4 container (moov at the start).
+// Parses a DASH MPD manifest. Returns the best audio representation's specs:
+// bitrate from @bandwidth, sample rate from @audioSamplingRate, plus a
+// resolvable init-segment URL when the manifest provides one. Returns null
+// on malformed input. Pure function (no network) for testability.
+export function parseDashManifest(text, baseUrl) {
+    if (!text || typeof text !== 'string') return null;
+    let doc;
+    try {
+        doc = new DOMParser().parseFromString(text, 'application/xml');
+    } catch {
+        return null;
+    }
+    if (!doc || doc.getElementsByTagName('parsererror').length > 0) return null;
+
+    const textOf = (el, tag) => {
+        const n = el.getElementsByTagName(tag)[0];
+        return n?.textContent?.trim() || null;
+    };
+
+    const mpdBase = textOf(doc.documentElement, 'BaseURL');
+    let best = null;
+
+    const adaptationSets = Array.from(doc.getElementsByTagName('AdaptationSet'));
+    for (const set of adaptationSets) {
+        const mime = (set.getAttribute('mimeType') || '').toLowerCase();
+        const contentType = (set.getAttribute('contentType') || '').toLowerCase();
+        const codecs = (set.getAttribute('codecs') || '').toLowerCase();
+        const isAudio =
+            contentType === 'audio' || mime.startsWith('audio/') || /(mp4a|fLaC|flac|opus|ec-3|ac-4)/.test(codecs);
+        if (!isAudio) continue;
+
+        const setRate = parseInt(String(set.getAttribute('audioSamplingRate') || '').split(/\s+/)[0], 10);
+        const period = set.parentNode;
+        const periodBase = period?.getElementsByTagName
+            ? (() => {
+                  // Only direct-child BaseURL, not nested ones.
+                  for (const child of period.children || []) {
+                      if (child.tagName === 'BaseURL') return child.textContent?.trim() || null;
+                  }
+                  return null;
+              })()
+            : null;
+        let setBase = null;
+        for (const child of set.children || []) {
+            if (child.tagName === 'BaseURL') {
+                setBase = child.textContent?.trim() || null;
+                break;
+            }
+        }
+        const template = set.getElementsByTagName('SegmentTemplate')[0];
+        const templateInit = template?.getAttribute('initialization') || null;
+
+        const representations = Array.from(set.getElementsByTagName('Representation'));
+        for (const rep of representations) {
+            const bandwidth = parseInt(rep.getAttribute('bandwidth') || '0', 10);
+            if (!Number.isFinite(bandwidth) || bandwidth <= 0) continue;
+            const rateRaw = String(rep.getAttribute('audioSamplingRate') || '').split(/\s+/)[0];
+            const sampleRate = parseInt(rateRaw, 10) || (Number.isInteger(setRate) ? setRate : null);
+
+            let repBase = null;
+            for (const child of rep.children || []) {
+                if (child.tagName === 'BaseURL') {
+                    repBase = child.textContent?.trim() || null;
+                    break;
+                }
+            }
+            const base = repBase || setBase || periodBase || mpdBase || baseUrl;
+
+            // Explicit Initialization element wins; otherwise try a
+            // SegmentTemplate pattern without time/number placeholders.
+            let initUri = null;
+            for (const child of rep.children || []) {
+                if (child.tagName === 'Initialization' && child.getAttribute('sourceURL')) {
+                    initUri = child.getAttribute('sourceURL');
+                    break;
+                }
+            }
+            let repTemplateInit = templateInit;
+            if (!initUri) {
+                const repTemplate = rep.getElementsByTagName('SegmentTemplate')[0];
+                if (repTemplate?.getAttribute('initialization')) {
+                    repTemplateInit = repTemplate.getAttribute('initialization');
+                }
+            }
+            if (!initUri && repTemplateInit && !/\$(Number|Time)\$/i.test(repTemplateInit)) {
+                initUri = repTemplateInit
+                    .replace(/\$RepresentationID\$/g, rep.getAttribute('id') || '')
+                    .replace(/\$Bandwidth\$/g, String(bandwidth));
+            }
+            if (initUri && base) {
+                try {
+                    initUri = new URL(initUri, base).toString();
+                } catch {
+                    initUri = null;
+                }
+            } else if (initUri && !base) {
+                initUri = null;
+            }
+
+            if (!best || bandwidth > best.bandwidth) {
+                best = {
+                    bandwidth,
+                    sampleRate: Number.isInteger(sampleRate) ? sampleRate : null,
+                    initUri,
+                };
+            }
+        }
+    }
+
+    return best;
+}
+
+// DASH path: specs from the MPD's audio Representation (bandwidth,
+// audioSamplingRate) plus the init segment's real codec fields when the
+// manifest exposes an Initialization URL.
+async function inspectDash(manifestUrl) {
+    const meta = {};
+
+    let manifestText;
+    try {
+        const manifestRes = await proxiedFetch(manifestUrl);
+        if (!manifestRes.ok) return {};
+        manifestText = await manifestRes.text();
+    } catch {
+        return {};
+    }
+
+    const best = parseDashManifest(manifestText, manifestUrl);
+    if (!best) return {};
+
+    if (best.bandwidth > 0) {
+        meta.bitrateKbps = Math.round(best.bandwidth / 1000);
+    }
+    if (best.sampleRate) {
+        meta.sampleRate = best.sampleRate;
+    }
+
+    if (best.initUri) {
+        const initBytes = await fetchHeadBytes(best.initUri);
+        if (initBytes) {
+            // Same ground-truth order as HLS: FLAC STREAMINFO first.
+            const flacSpec = extractFlacSpec(initBytes);
+            if (flacSpec) {
+                Object.assign(meta, pickPlausible(flacSpec));
+            } else {
+                Object.assign(meta, pickPlausible(readAudioSpecFromMoov(initBytes)));
+            }
+            // MPD-declared rate wins ties: init segments can carry zeroed fields.
+            if (best.sampleRate) meta.sampleRate = best.sampleRate;
+        }
+    }
+
+    return pickPlausible(meta);
+}
+// Direct-file path: probe the exact total byte size via Content-Range and
+// derive the true average bitrate. Duration prefers the exact FLAC
+// STREAMINFO sample count (raw .flac files), then the track duration; the
+// sample spec comes from STREAMINFO or the mp4 moov as available.
 async function inspectDirect(url, durationSeconds) {
     const meta = {};
+    let exactDurationSec = 0;
 
     const headBytes = await fetchHeadBytes(url);
     if (headBytes) {
-        const spec = readAudioSpecFromMoov(headBytes);
-        Object.assign(meta, pickPlausible(spec));
+        if (isRawFlacHead(headBytes)) {
+            const body = headBytes.slice(8, 42);
+            const spec = decodeFlacStreamInfo(body);
+            Object.assign(meta, pickPlausible(spec));
+            const totalSamples = decodeFlacTotalSamples(body);
+            if (totalSamples && spec?.sampleRate) {
+                exactDurationSec = totalSamples / spec.sampleRate;
+            }
+        } else {
+            const spec = readAudioSpecFromMoov(headBytes);
+            Object.assign(meta, pickPlausible(spec));
+        }
     }
 
-    if (durationSeconds && durationSeconds > 0) {
+    const durationSec = exactDurationSec > 0 ? exactDurationSec : durationSeconds;
+    if (durationSec && durationSec > 0) {
         try {
             const res = await proxiedFetch(url, { headers: { Range: 'bytes=0-0' } });
             const total = res.headers.get('content-range')?.match(/\/(\d+)\s*$/);
             if (total) {
                 const size = parseInt(total[1], 10);
-                if (size > 0) meta.bitrateKbps = Math.round((size * 8) / durationSeconds / 1000);
+                if (size > 0) meta.bitrateKbps = Math.round((size * 8) / durationSec / 1000);
             } else {
                 res.body?.cancel().catch(() => {});
             }
@@ -383,7 +582,9 @@ export async function inspectStreamMetadata(streamUrl, options = {}) {
 
     let meta;
     try {
-        if (options.isHls) {
+        if (options.isDash || /\.mpd(\?|#|$)/i.test(streamUrl)) {
+            meta = await inspectDash(streamUrl);
+        } else if (options.isHls) {
             meta = await inspectHls(streamUrl);
         } else {
             meta = await inspectDirect(streamUrl, options.duration);

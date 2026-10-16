@@ -1421,7 +1421,14 @@ export class UIRenderer {
             .replace(/\s{2,}/g, ' ')
             .trim();
         const bracketHtml = bracketMatches
-            .map((segment) => `<span class="fullscreen-title-bracket">${segment}</span>`)
+            .map((segment) => {
+                // Show the inner text without the surrounding braces.
+                const unbracketed = segment
+                    .replace(/^[([]/, '')
+                    .replace(/[)\]]$/, '')
+                    .trim();
+                return `<span class="fullscreen-title-bracket">${unbracketed || segment}</span>`;
+            })
             .join('');
 
         return `

@@ -2,12 +2,7 @@
 // Shared Audio Context Manager - handles EQ and provides context for visualizer
 // Supports 3-32 parametric EQ bands
 
-import {
-    equalizerSettings,
-    monoAudioSettings,
-    performanceModeSettings,
-    audioProcessingSettings,
-} from './storage.js';
+import { equalizerSettings, monoAudioSettings, performanceModeSettings, audioProcessingSettings } from './storage.js';
 import { isFirefox } from './platform-detection.js';
 
 // Generate frequency array for given number of bands using logarithmic spacing
@@ -348,6 +343,11 @@ class AudioContextManager {
     init(audioElement) {
         if (this.isInitialized) return;
         if (!audioElement) return;
+
+        // Pure mode: never capture the element. Any Web Audio tap — even an
+        // analyser — reroutes output through the mixer and ends bit-perfect
+        // playback, so the media element plays straight to the device.
+        if (audioProcessingSettings.isPure()) return;
 
         this.audio = audioElement;
 

@@ -1110,8 +1110,18 @@ export function initializeSettings(scrobbler, player, api, ui, discord) {
         audioProcessingMode.value = audioProcessingSettings.getMode();
         audioProcessingMode.addEventListener('change', (e) => {
             audioProcessingSettings.setMode(e.target.value);
-            if (audioContextManager.isInitialized && audioProcessingSettings.isPure()) {
-                console.log('[Settings] Switched to Pure Mode. Will apply on next track or app reload.');
+            if (audioProcessingSettings.isPure()) {
+                if (audioContextManager.isInitialized) {
+                    // A captured element can never be released back to direct
+                    // output — only a reload rebuilds the pipeline bit-perfect.
+                    if (
+                        confirm(
+                            'Pure mode bypasses all processing. The audio pipeline can only be released with a reload. Reload now?'
+                        )
+                    ) {
+                        window.location.reload();
+                    }
+                }
             }
         });
     }
@@ -3661,7 +3671,18 @@ function initializeFontSettings() {
         showFontSection(e.target.value);
     });
 
-    // Preset font change
+    // Preset font change. Google-hosted families go through loadGoogleFont
+    // so the webfont is actually fetched instead of silently falling back.
+    const GOOGLE_HOSTED_PRESETS = new Set([
+        'Bricolage Grotesque',
+        'Inter',
+        'IBM Plex Mono',
+        'Roboto',
+        'Open Sans',
+        'Lato',
+        'Montserrat',
+        'Poppins',
+    ]);
     fontPresetSelect.addEventListener('change', (e) => {
         const value = e.target.value;
         if (value === 'System UI') {
@@ -3673,6 +3694,13 @@ function initializeFontSettings() {
             fontSettings.loadPresetFont('monospace', 'monospace');
         } else if (value === 'Apple Music') {
             fontSettings.loadAppleMusicFont();
+        } else if (GOOGLE_HOSTED_PRESETS.has(value)) {
+            fontSettings.loadGoogleFont(value).then((ok) => {
+                if (!ok) {
+                    alert(`Could not load font "${value}". Keeping the current font.`);
+                    fontPresetSelect.value = fontSettings.getConfig().family;
+                }
+            });
         } else {
             fontSettings.loadPresetFont(value, 'sans-serif');
         }
@@ -3698,7 +3726,11 @@ function initializeFontSettings() {
             // Not a URL, treat as font name
         }
 
-        fontSettings.loadGoogleFont(fontName);
+        fontSettings.loadGoogleFont(fontName).then((ok) => {
+            if (!ok) {
+                alert(`Could not load font "${fontName}". Check the name and connection.`);
+            }
+        });
     });
 
     // URL font apply
