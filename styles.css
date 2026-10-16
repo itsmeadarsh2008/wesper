@@ -9215,15 +9215,6 @@ input:checked + .slider::before {
     flex-shrink: 0;
 }
 
-.friend-card .friend-card-actions {
-    flex-shrink: 0;
-}
-
-.friend-card .friend-card-actions .btn-secondary {
-    padding: 0.4rem 0.75rem;
-    font-size: 0.8rem;
-}
-
 @media (max-width: 480px) {
     .friends-grid {
         grid-template-columns: 1fr;
