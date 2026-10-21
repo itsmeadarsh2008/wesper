@@ -16,6 +16,7 @@ import {
 import { isFirefox, isIos, isSafari } from './platform-detection.js';
 import { SVG_CLOCK, SVG_ATMOS } from './icons.js';
 import { showNotification } from './downloads.js';
+import { needsWasmAlacDecode, decodeAlacToPlayableUrl } from './wasm-alac-player.js';
 import {
     queueManager,
     replayGainSettings,
@@ -1447,7 +1448,30 @@ export class Player {
                     this.dashPlayer.reset();
                     this.dashInitialized = false;
                 }
-                if (isCrossOriginRegularFile) {
+                // Some addons deliver ALAC (this Apple Music addon serves it
+                // for every tier) which Chrome/Firefox cannot decode. Decode
+                // with the WASM bridge into a float WAV blob so lossless still
+                // plays — through the same native element and Web Audio graph.
+                let regularFileUrl = streamUrl;
+                let wasmDecoded = false;
+                if (needsWasmAlacDecode(streamInfo, streamUrl)) {
+                    showNotification('Decoding lossless ALAC…', 3000);
+                    try {
+                        regularFileUrl = await decodeAlacToPlayableUrl(streamUrl);
+                        wasmDecoded = true;
+                    } catch (error) {
+                        console.warn(
+                            '[ALAC-WASM] decode failed — playing the original stream:',
+                            error?.message || error
+                        );
+                        showNotification('ALAC decode failed — playing original stream', 3000);
+                    }
+                }
+                if (wasmDecoded) {
+                    // Blob URLs are same-origin: the Web Audio graph stays
+                    // attached (EQ, visualizer), unlike the cross-origin path.
+                    await this.loadWithNativeAudio(regularFileUrl, startTime);
+                } else if (isCrossOriginRegularFile) {
                     await this.loadWithHowler(streamUrl, startTime);
                 } else {
                     await this.loadWithNativeAudio(streamUrl, startTime);

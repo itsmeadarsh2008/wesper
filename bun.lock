@@ -5,18 +5,19 @@
     "": {
       "name": "monochrome",
       "dependencies": {
+        "@audio/decode-aac": "^1.6.0",
         "@ffmpeg/core": "^0.12.10",
         "@ffmpeg/ffmpeg": "^0.12.15",
         "@ffmpeg/util": "^0.12.2",
         "@tabler/icons": "^3.46.0",
         "appwrite": "^26.2.0",
+        "artist-signatures": "https://github.com/itsmeadarsh2008/artist-signature/archive/fa51ed8.tar.gz",
         "butterchurn": "^2.6.7",
         "butterchurn-presets": "^2.4.7",
         "dashjs": "^5.2.0",
         "fuse.js": "^7.5.0",
         "hls.js": "^1.6.18",
         "howler": "^2.2.4",
-        "artist-signatures": "https://github.com/itsmeadarsh2008/artist-signature/archive/fa51ed8.tar.gz",
         "mailchecker": "^6.0.21",
         "shaka-player": "^5.2.4",
         "three": "^0.185.1",
@@ -47,6 +48,8 @@
   },
   "packages": {
     "@apideck/better-ajv-errors": ["@apideck/better-ajv-errors@0.3.6", "", { "dependencies": { "json-schema": "^0.4.0", "jsonpointer": "^5.0.0", "leven": "^3.1.0" }, "peerDependencies": { "ajv": ">=8" } }, "sha512-P+ZygBLZtkp0qqOAJJVX4oX/sFo5JR3eBWwwuqHHhK0GIgQOKWrAfiAaWX0aArHkRWHMuggFEgAZNxVPwPZYaA=="],
+
+    "@audio/decode-aac": ["@audio/decode-aac@1.6.0", "", {}, "sha512-4EdPNlHkFstqlfZhMC1pER+SKKldh1ZubD2VaxLAxSPH8fLA6upwVCVyMnqZ41PD6XTBrvf87aRZ0aPQTb4eiw=="],
 
     "@babel/code-frame": ["@babel/code-frame@7.27.1", "", { "dependencies": { "@babel/helper-validator-identifier": "^7.27.1", "js-tokens": "^4.0.0", "picocolors": "^1.1.1" } }, "sha512-cjQ7ZlQ0Mv3b47hABuTevyTuYN4i+loJKGeV9flcCgIK37cCXRh+L1bd3iBHlynerhQ7BhCkn2BPbQUL+rGqFg=="],
 
