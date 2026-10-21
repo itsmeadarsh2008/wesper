@@ -26,7 +26,9 @@ function addonIdentity(addon) {
 // .../manifest.json?sources=tidal/search?q=... (which hit the manifest
 // route and return zero tracks instead of erroring).
 function splitAddonUrl(input) {
-    const noHash = String(input || '').trim().split('#')[0];
+    const noHash = String(input || '')
+        .trim()
+        .split('#')[0];
     const qIdx = noHash.indexOf('?');
     const path = (qIdx >= 0 ? noHash.slice(0, qIdx) : noHash).replace(/\/+$/, '');
     const query = qIdx >= 0 ? noHash.slice(qIdx + 1) : '';
@@ -377,6 +379,32 @@ export const extractSampleRate = (streamInfo) => {
     if (match) return Math.round(parseFloat(match[1]) * 1000);
     return null;
 };
+
+// True when this browser can actually decode the stream's codec. Lazily probed
+// through a throwaway <audio> element and cached: Chrome/Firefox answer ""
+// (no support) for ALAC while Safari replies "probably", so an ALAC stream —
+// even a perfectly lossless one — must not be chosen for playback there.
+// AAC/FLAC/MP3/Opus decode in every target browser; exotic variants (ac-3,
+// ec-3, ac-4) are probed the same way.
+let decodeProbeEl = null;
+export const canBrowserDecode = (codec) => {
+    const c = String(codec || '').toLowerCase();
+    if (!c) return true;
+    if (/^(aac|mp3|mp4a|flac|opus|vorbis|pcm|wav)/.test(c)) return true;
+    if (/^(alac|ac-?3|eac-?3|ec-?3|ac-?4)$/.test(c)) {
+        const tag = c.replace(/^eac-3$/, 'ec-3');
+        try {
+            if (typeof document === 'undefined') return true;
+            if (!decodeProbeEl) decodeProbeEl = document.createElement('audio');
+            return decodeProbeEl.canPlayType(`audio/mp4; codecs="${tag}"`) !== '';
+        } catch {
+            return true;
+        }
+    }
+    return true;
+};
+
+const streamCodecForDecoding = (streamInfo) => streamInfo?.codec || streamInfo?.fileCodec || streamInfo?.format || null;
 
 // Extract the actual bitrate (kbps) reported by the addon. Preferred source is
 // the numeric bitrate field the addon returns per adaptive format; fall back to
@@ -1538,19 +1566,21 @@ export class EclipseAPI {
             }
             throw error;
         };
-        // Resolve a stream for a concrete track id against every stream-capable
+        // Resolution for a concrete track id against every stream-capable
         // addon. Throws when no addon can serve it.
         //
         // With more than one stream-capable addon installed, every addon is
         // asked in parallel and the best-quality response wins (tie → priority
         // order). A single addon keeps the old fallback-chain behavior so a
-        // failing addon can hand off to the next candidate.
-        const tryResolve = async (candidateId) => {
+        // failing addon can hand off to the next candidate. `requestQuality`
+        // lets the tier guard below retry at a cheaper hint (LOSSLESS) in the
+        // same flow, still honoring the best-quality-wins rule.
+        const tryResolve = async (candidateId, requestQuality = quality || 'LOSSLESS') => {
             if (streamCandidates.length > 1) {
                 const settled = await Promise.allSettled(
                     streamCandidates.map(async (addon) => {
                         const info = await this._request(
-                            `stream/${candidateId}?quality=${encodeURIComponent(quality || 'LOSSLESS')}`,
+                            `stream/${candidateId}?quality=${encodeURIComponent(requestQuality)}`,
                             MAX_429_RETRIES,
                             true,
                             false,
@@ -1580,7 +1610,7 @@ export class EclipseAPI {
                         continue;
                     }
                     const { addon, info } = result.value;
-                    const rank = streamQualityRank(info, quality);
+                    const rank = streamQualityRank(info, requestQuality);
                     if (rank > bestRank) {
                         bestRank = rank;
                         chosen = info;
@@ -1602,7 +1632,7 @@ export class EclipseAPI {
             try {
                 const info = single
                     ? await this._request(
-                          `stream/${candidateId}?quality=${encodeURIComponent(quality || 'LOSSLESS')}`,
+                          `stream/${candidateId}?quality=${encodeURIComponent(requestQuality)}`,
                           MAX_429_RETRIES,
                           true,
                           false,
@@ -1614,7 +1644,7 @@ export class EclipseAPI {
                           addonIdentity(single)
                       )
                     : await this._request(
-                          `stream/${candidateId}?quality=${encodeURIComponent(quality || 'LOSSLESS')}`,
+                          `stream/${candidateId}?quality=${encodeURIComponent(requestQuality)}`,
                           MAX_429_RETRIES,
                           true,
                           false,
@@ -1640,6 +1670,78 @@ export class EclipseAPI {
                 `[Eclipse] Cannot resolve stream id ${trackId} directly — retrying with search-matched id ${searchId}`
             );
             resolved = await tryResolve(searchId);
+        }
+        // Tier + playability negotiation: some addons cannot serve every tier
+        // the app requests and silently downgrade instead. This Apple Music
+        // addon only knows lossless/high/low (its manifest settings), so a
+        // HI_RES_LOSSLESS hint returns AAC 256 kbps. Two failure shapes:
+        //
+        //  1. Below-tier answer (downgrade): lossless request → lossy stream.
+        //     Re-resolve at LOSSLESS and adopt the retry when it meets the
+        //     tier AND is decodable here.
+        //  2. Tier-met answer the browser still cannot decode: this addon
+        //     serves ALAC as its lossless tier, but Chrome/Firefox cannot
+        //     decode ALAC (Safari can). Retry at HIGH (the best playable
+        //     lossy tier) so playback gets an actual sound rather than a
+        //     broken HTMLAudio source. Atmos is exempt — lossy E-AC3 JOC
+        //     legitimately serves Atmos requests.
+        const requestedTier = quality || 'LOSSLESS';
+        if (resolved?.data) {
+            const firstAnswer = resolved.data;
+            const firstPlayable = canBrowserDecode(streamCodecForDecoding(firstAnswer));
+            if (!this._staleStreamMeetsTier(firstAnswer, requestedTier)) {
+                if (firstPlayable) {
+                    // A lossy answer still beats silence only when the
+                    // lossless retry cannot deliver playable audio.
+                    try {
+                        const losslessRetry = await tryResolve(trackId, 'LOSSLESS');
+                        if (losslessRetry?.data && this._staleStreamMeetsTier(losslessRetry.data, requestedTier)) {
+                            if (canBrowserDecode(streamCodecForDecoding(losslessRetry.data))) {
+                                resolved = losslessRetry;
+                            }
+                            // else: lossless undecodable (ALAC on Chrome) and
+                            // the lossy first answer is playable — keep it.
+                        }
+                    } catch {
+                        // Keep the below-tier answer: a lossy stream still beats no stream.
+                    }
+                }
+                // Undecodable AND below tier — nothing playable here either
+                // way; try LOSSLESS as the better file grade regardless.
+                else {
+                    try {
+                        console.warn(
+                            `[Eclipse] Stream for ${trackId} is lossless but this browser cannot decode it — trying a playable tier`
+                        );
+                        const lossyRetry = await tryResolve(trackId, 'HIGH');
+                        if (lossyRetry?.data && canBrowserDecode(streamCodecForDecoding(lossyRetry.data))) {
+                            resolved = lossyRetry;
+                        } else {
+                            resolved = await tryResolve(trackId, 'LOSSLESS');
+                        }
+                    } catch {
+                        // Whatever the addon returns, surface the original.
+                    }
+                }
+            } else if (!firstPlayable) {
+                // Tier satisfied but the codec cannot play here: the tier
+                // mapping only exposes lossless variants elsewhere (see the
+                // Apple ALAC case). Ask for the best playable lossy tier.
+                console.warn(
+                    `[Eclipse] Stream for ${trackId} is lossless but this browser cannot decode it — trying a playable tier`
+                );
+                try {
+                    const playableRetry = await tryResolve(trackId, 'HIGH');
+                    if (playableRetry?.data && canBrowserDecode(streamCodecForDecoding(playableRetry.data))) {
+                        resolved = playableRetry;
+                    } else {
+                        const losslessAgain = await tryResolve(trackId, 'LOSSLESS');
+                        if (losslessAgain?.data) resolved = losslessAgain;
+                    }
+                } catch {
+                    // Keep the undecodable answer when nothing else resolves.
+                }
+            }
         }
         const { data } = resolved;
         const stream = {
